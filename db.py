@@ -29,16 +29,15 @@ class DbFunctions():
         :param albums: Album names as a list
         """
         artist = artist.title()
-        print(artist)
         try:
             self.db.execute("INSERT INTO artists (name) VALUES (?)", (artist,))
             artist_id = self.db.lastrowid
         except:
             return NAME_COLLIDED
-        for album in albums:
-            self.db.execute(
-                "INSERT OR IGNORE INTO albums (title, artist_id) VALUES (?, ?)", (album, artist_id))
-            print(album)
+        if albums != None:
+            for album in albums:
+                self.db.execute(
+                    "INSERT OR IGNORE INTO albums (title, artist_id) VALUES (?, ?)", (album, artist_id))
         self.database.commit()
         return SUCCESS_NO_RESPONSE
 
