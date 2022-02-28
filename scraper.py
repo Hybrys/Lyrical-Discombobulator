@@ -1,9 +1,10 @@
 from bs4 import BeautifulSoup
 import requests
+import db
 
 
 def parse_album(artist):
-    albooms = []
+    albums = []
     artist.replace(" ", "_")
 
     response = requests.get(
@@ -22,15 +23,15 @@ def parse_album(artist):
             if first_col == "year":
                 for element in finder.tbody("tr"):
                     if element.td != None and element.td.next_sibling != None:
-                        albooms.append(
+                        albums.append(
                             element.td.next_sibling.next_sibling.i.text)
 
             elif first_col == "title":
                 for element in finder.tbody("tr"):
                     if element.td != None and element.td.find_previous_sibling("th") != None:
-                        albooms.append(
+                        albums.append(
                             element.td.find_previous_sibling("th").i.text)
-            return albooms
+            return albums
         except:
             print(
                 f"I didn't find a Studio Album table for {artist}, trying Discography")
@@ -40,21 +41,26 @@ def parse_album(artist):
                 id="Discography").parent.next_sibling.next_sibling.next_sibling.next_sibling
             for element in finder:
                 if element.name != None:
-                    albooms.append(element.i.text)
-            return albooms
+                    albums.append(element.i.text)
+            return albums
         except:
             print(f"I didn't find a Discography table for {artist} either!")
 
 
+dbcur = db.DbFunctions()
+
 artists = ["Death Cab for Cutie", "Spitalfield", "Interpol", "Metric",
            "Crash Test Dummies", "The Juliana Theory", "Amber Pacific"]
-letsparse = {}
+parsed_artists = {}
 
 for artist in artists:
+    parsed_artists[artist] = parse_album(artist)
 
-    letsparse[artist] = parse_album(artist)
+for artist in parsed_artists:
+    resp = dbcur.add_artist(artist, parsed_artists[artist])
+    if resp == db.NAME_COLLIDED:
+        print("I collided with a name in the db!")
 
-# print(parse_album("The Juliana Theory"))
-for artist in letsparse:
-    print(artist)
-    print("\t", letsparse[artist])
+    for album in parsed_artists[artist]:
+        # album parsing songs goes here
+        pass
