@@ -63,87 +63,90 @@ def parse_tracks(artist, album):
 
     response = requests.get(
         f"https://en.wikipedia.org/wiki/{album}")
-
     soup = BeautifulSoup(response.text, 'html.parser')
+    finder = find_track_list(soup)
 
-    if soup.find(id="Track_listing") == None:
-        print("Track listing wasn't found!  Is this even an album page?!")
+    if finder == None:
+        print("Track listing wasn't found!  Trying (album)")
+        response = requests.get(
+            f"https://en.wikipedia.org/wiki/{album}_(album)")
+        soup = BeautifulSoup(response.text, 'html.parser')
+        finder = find_track_list(soup)
+
+    if finder == None:
+        print(f"Track listing wasn't found!  Trying ({artist}_album)")
         response = requests.get(
             f"https://en.wikipedia.org/wiki/{album}_({artist}_album)")
+        soup = BeautifulSoup(response.text, 'html.parser')
+        finder = find_track_list(soup)
 
-    if response.status_code == 200:
-        try:
-            try:
-                finder = soup.find(
-                    id="Track_listing").parent.find_next_sibling("table")
-            except AttributeError:
-                print(
-                    "I couldn't find a track_listing, these assholes did something else!")
-                finder = soup.find("table", class_="tracklist")
-                print(finder, "this is the tracklist finder")
+    if response.status_code != 200:
+        print(f"I'm {response.status_code}ing please send help")
+        print(f"The artist is: {artist}\nThe album is: {album}")
 
-            first_col = finder.tbody.tr.th.text.rstrip().lower()
+    else:
+        tabler = finder.parent.find_next_sibling("table")
+        lister = finder.parent.find_next_sibling("ol")
+        if tabler:
+            first_col = tabler.tbody.tr.th.text.rstrip().lower()
 
             if first_col == "no.":
-                for element in finder.tbody("tr"):
+                for element in tabler.tbody("tr"):
                     if element.td != None and element.td.find_next_sibling("td") != None:
-                        print(element.td.text.replace('"', ''))
-                        print(element.td.find_next_sibling("td").text)
                         tracks.append(
                             element.td.text.replace('"', ''))
 
             elif first_col == "title":
-                for element in finder.tbody("tr"):
+                for element in tabler.tbody("tr"):
                     if element.td != None and element.td.find_previous_sibling("th") != None:
                         tracks.append(
                             element.td.find_previous_sibling("th").i.text)
             return tracks
 
-        except AttributeError:
+        elif lister:
             print(
-                f"I didn't find a table for {artist}, trying without tables!")
-            try:
-                finder = soup.find(
-                    id="Track_listing").parent.find_next_sibling("ol")
-            except AttributeError:
-                finder = soup.find(
-                    id="tracklist").parent.find_next_sibling("ol")
-            for element in finder("li"):
+                f"I didn't find a table for {artist}, but I found an ordered list!")
+            for element in lister("li"):
                 hyphen = element.text.find("–")
                 tracks.append((element.text[:hyphen-1].replace('"', '')))
             return tracks
-
-        except Exception as e:
-            raise e
-
-    else:
-        print(f"I'm {response.status_code}ing please send help")
+        else:
+            print("Whelp, I broke")
 
 
-# dbcur = db.DbFunctions()
+def find_track_list(soup):
+    finder = soup.find(id="Track_listing")
+    # print("1", finder)
+    if finder != None:
+        return finder
+    finder = soup.find(id="tracklist")
+    # print("2", finder)
+    if finder != None:
+        return finder
+    finder = soup.find(class_="tracklist")
+    # print("3", finder)
+    if finder != None:
+        return finder
+    return None
 
-# artists = ["Death Cab for Cutie", "Spitalfield", "Interpol", "Metric",
-#            "Crash Test Dummies", "The Juliana Theory", "Amber Pacific"]
-# parsed_artists = {}
 
-# for artist in artists:
-#     parsed_artists[artist] = parse_album(artist)
+dbcur = db.DbFunctions()
 
-# for artist in parsed_artists:
-#     resp = dbcur.add_artist(artist, parsed_artists[artist])
-#     if resp == db.NAME_COLLIDED:
-#         print("I collided with a name in the db!")
-
-#     for album in parsed_artists[artist]:
-#         # album parsing songs goes here
-#         pass
-
-parsed_artists = {"Death Cab for Cutie": [
-    "Codes and Keys"], "Spitalfield": ["Stop Doing Bad Things"], "The Juliana Theory": ["Love"]}
+artists = ["Death Cab for Cutie", "Spitalfield", "Interpol", "Metric",
+           "Crash Test Dummies", "The Juliana Theory", "Amber Pacific"]
+parsed_artists = {}
 parsed_albums = {}
+
+for artist in artists:
+    parsed_artists[artist] = parse_album(artist)
+
+for artist in parsed_artists:
+    resp = dbcur.add_artist(artist, parsed_artists[artist])
+    if resp == db.NAME_COLLIDED:
+        print("I collided with a name in the db!")
 
 for artist in parsed_artists:
     for album in parsed_artists[artist]:
         parsed_albums[album] = parse_tracks(artist, album)
-        print(artist, " ", album)
-        print(f"\t{parsed_albums[album]}")
+        # print(artist, " ", album)
+        # print(f"\t{parsed_albums[album]}")

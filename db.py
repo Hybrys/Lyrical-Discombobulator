@@ -20,7 +20,7 @@ class DbFunctions():
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS albums (album_id INTEGER PRIMARY KEY, title TEXT, artist_id INTEGER, FOREIGN KEY(artist_id) REFERENCES artists(artist_id), UNIQUE(title, artist_id))")
         self.db.execute(
-            "CREATE TABLE IF NOT EXISTS tracks (track_id INTEGER PRIMARY KEY, title TEXT, lyrics TEXT, album_id INTEGER, FOREIGN KEY(album_id) REFERENCES albums(album_id), UNIQUE(title, album_id))")
+            "CREATE TABLE IF NOT EXISTS tracks (track_id INTEGER PRIMARY KEY, title TEXT, track_num INTEGER, lyrics TEXT, album_id INTEGER, FOREIGN KEY(album_id) REFERENCES albums(album_id), UNIQUE(title, album_id))")
 
     def add_artist(self, artist, albums):
         """
