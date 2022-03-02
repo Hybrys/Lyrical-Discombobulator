@@ -3,7 +3,20 @@ import requests
 import db
 import json
 import logging
-import time
+
+"""TODO
+    MUSTS
+    1. Tracks into the DB!
+    2. Parse lyrics!
+    3. Lyrics into the DB!
+    4. 'Front' 'end'
+    
+    WOULD BE NICE
+    1. Handle typeerroring cases
+    2. Create handler for cases that are not properly parsing for later analysis (DB?)
+    3. Backtracking refactor (parse whole pages)
+    4. Add timecodes to tracks
+"""
 
 
 def parse_album(artist):
@@ -66,6 +79,7 @@ def parse_album(artist):
             return albums
         except AttributeError:
             logging.error(f"I failed parsing any albums for {artist}")
+            return albums
 
 
 def parse_tracks(artist, album):
@@ -103,7 +117,7 @@ def parse_tracks(artist, album):
 
     if finder == None:
         logging.error(
-            f"I still can't find anything for {artist}'s album {album}")
+            f"I still can't find a wiki page for {artist}'s album {album}")
         return tracks
 
     if response.status_code != 200:
@@ -191,7 +205,7 @@ def find_track_list(soup):
     return None
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 
 dbcur = db.DbFunctions()
 artistjson = open("artist_list1.json")
@@ -201,22 +215,32 @@ artists = artistdata["artists"]
 # Manual override for focused testing
 # artists = ["Bright Eyes", "Lotus Child",
 #    "Thursday"]
-# artists = ["Sly and the Family Stone"]
+# artists = ["Bright Eyes"]
 
 parsed_artists = {}
 parsed_albums = {}
 
 for artist in artists:
     parsed_artists[artist] = parse_album(artist)
-    # Rate limiting countermeasure - Am I necessary? Who knows!
-    # time.sleep(0.1)
 
 for artist in parsed_artists:
-    resp = dbcur.add_artist(artist, parsed_artists[artist])
+    resp = dbcur.add_artist_albums(artist, parsed_artists[artist])
     if resp == db.NAME_COLLIDED:
         logging.debug(f"I collided with a name in the db for {artist}")
+    elif resp == db.NO_ITEM_IN_LIST:
+        logging.error(f"There were no albums in the list for artist {artist}")
+    else:
+        logging.info(f"Successfully added {artist} albums to the db.")
+
     if parsed_artists[artist] != None:
         for album in parsed_artists[artist]:
             parsed_albums[album] = parse_tracks(artist, album)
+            resp = dbcur.add_album_tracks(artist, album, parsed_albums[album])
+            if resp == db.NOT_FOUND:
+                logging.critical(f"The artist {artist} and album {album} were not found while trying to add tracks to the database!")
+            elif resp == db.NO_ITEM_IN_LIST:
+                logging.error(f"The album {album} from artist {artist} has an empty list for its tracks.  Check nulled 'isparsed' items later!")
+            else:
+                logging.info(f"Successfully added {album} had its tracks added to the db.")
     else:
         logging.error(f"This artist {artist} has 'Nonetype' albums!")
