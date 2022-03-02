@@ -6,11 +6,10 @@ import logging
 
 """TODO
     MUSTS
-    1. Tracks into the DB!
-    2. Parse lyrics!
-    3. Lyrics into the DB!
-    4. 'Front' 'end'
-    
+    1. Parse lyrics!
+    2. Lyrics into the DB!
+    3. 'Front' 'end'
+
     WOULD BE NICE
     1. Handle typeerroring cases
     2. Create handler for cases that are not properly parsing for later analysis (DB?)
@@ -132,16 +131,16 @@ def parse_tracks(artist, album):
                 if first_col == "no.":
                     for element in tabler.tbody("tr"):
                         if element.td != None and element.td.find_next_sibling("td") != None:
-                            tracks.append(
-                                element.td.text.replace('"', ''))
+                            title_string = element.td.text
+                            if title_string[0] == '"':
+                                title_string = title_string[1:title_string.find('"', 1)+1]
+                            tracks.append(element.td.text.replace('"', ''))
 
                 elif first_col == "title":
                     for element in tabler.tbody("tr"):
                         if element.td != None and element.td.find_previous_sibling("th") != None:
-                            tracks.append(
-                                element.td.find_previous_sibling("th").i.text)
-            logging.info(
-                f"Successfully returning tracks for {album} from a table!")
+                            tracks.append(element.td.find_previous_sibling("th").i.text)
+            logging.info(f"Successfully returning tracks for {album} from a table!")
             return tracks
         except AttributeError:
             pass
@@ -205,7 +204,7 @@ def find_track_list(soup):
     return None
 
 
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.DEBUG)
 
 dbcur = db.DbFunctions()
 artistjson = open("artist_list1.json")
@@ -215,32 +214,29 @@ artists = artistdata["artists"]
 # Manual override for focused testing
 # artists = ["Bright Eyes", "Lotus Child",
 #    "Thursday"]
-# artists = ["Bright Eyes"]
+artists = ["Bright Eyes"]
 
 parsed_artists = {}
 parsed_albums = {}
+parsed_tracks = {}
 
 for artist in artists:
-    parsed_artists[artist] = parse_album(artist)
-
-for artist in parsed_artists:
-    resp = dbcur.add_artist_albums(artist, parsed_artists[artist])
+    resp = dbcur.add_artist(artist)
     if resp == db.NAME_COLLIDED:
         logging.debug(f"I collided with a name in the db for {artist}")
-    elif resp == db.NO_ITEM_IN_LIST:
-        logging.error(f"There were no albums in the list for artist {artist}")
     else:
-        logging.info(f"Successfully added {artist} albums to the db.")
+        logging.info(f"Successfully added {artist} to the db.")
 
-    if parsed_artists[artist] != None:
-        for album in parsed_artists[artist]:
-            parsed_albums[album] = parse_tracks(artist, album)
-            resp = dbcur.add_album_tracks(artist, album, parsed_albums[album])
-            if resp == db.NOT_FOUND:
-                logging.critical(f"The artist {artist} and album {album} were not found while trying to add tracks to the database!")
-            elif resp == db.NO_ITEM_IN_LIST:
-                logging.error(f"The album {album} from artist {artist} has an empty list for its tracks.  Check nulled 'isparsed' items later!")
-            else:
-                logging.info(f"Successfully added {album} had its tracks added to the db.")
+for artist in dbcur.view_unparsed_artists():
+    parsed_artists[artist] = parse_album(artist[0])
+    resp = dbcur.add_artist_albums(artist, parsed_artists[artist])
+
+for album in dbcur.view_unparsed_albums():
+    parsed_albums[album[0]] = parse_tracks(album[1], album[0])
+    resp = dbcur.add_album_tracks(album[1], album[0], parsed_albums[album[0]])
+    if resp == db.NOT_FOUND:
+        logging.critical(f"The artist {artist} and album {album[0]} were not found while trying to add tracks to the database!")
+    elif resp == db.NO_ITEM_IN_LIST:
+        logging.error(f"The album {album[0]} from artist {artist} has an empty list for its tracks.  Check nulled 'isparsed' items later!")
     else:
-        logging.error(f"This artist {artist} has 'Nonetype' albums!")
+        logging.info(f"Successfully added {album[0]} had its tracks added to the db.")

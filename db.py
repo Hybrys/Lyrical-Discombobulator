@@ -22,6 +22,20 @@ class DbFunctions():
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS tracks (track_id INTEGER PRIMARY KEY, title TEXT, track_num INTEGER, lyrics TEXT, album_id INTEGER, FOREIGN KEY(album_id) REFERENCES albums(album_id), UNIQUE(title, album_id))")
 
+    def add_artist(self, artist):
+        """
+        Adds one single artist to the database
+
+        :param artist: The name of the artist to add
+        """
+        name_test = self.db.execute("SELECT * FROM artists WHERE name = (?)", (artist,)).fetchone()
+        if name_test == None:
+            self.db.execute("INSERT INTO artists (name, isparsed) VALUES (?, ?)", (artist, 0))
+            self.database.commit()
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NAME_COLLIDED
+
     def add_artist_albums(self, artist, albums):
         """
         Adds the artist to the artists database, and their albums to the albums database with a reference to which artist it belongs
@@ -29,17 +43,12 @@ class DbFunctions():
         :param artist: Artist name as a string
         :param albums: Album names as a list
         """
-        try:
-            self.db.execute("INSERT INTO artists (name) VALUES (?)", (artist,))
-            artist_id = self.db.lastrowid
-        except:
-            return NAME_COLLIDED
+        artist_id = self.db.execute("SELECT artist_id FROM artists WHERE name = (?)", (artist[0],)).fetchone()[0]
 
         if albums != None:
             for album in albums:
-                self.db.execute(
-                    "INSERT OR IGNORE INTO albums (album_title, artist_id) VALUES (?, ?)", (album, artist_id))
-            self.db.execute("UPDATE artists SET isparsed = (?) WHERE name = (?)", (1, artist))
+                self.db.execute("INSERT OR IGNORE INTO albums (album_title, artist_id, isparsed) VALUES (?, ?, ?)", (album, artist_id, 0))
+            self.db.execute("UPDATE artists SET isparsed = (?) WHERE name = (?)", (1, artist[0]))
         else:
             return NO_ITEM_IN_LIST
         self.database.commit()
@@ -57,7 +66,6 @@ class DbFunctions():
         album_id = self.album_artist_match(artist, album)
         if album_id == NOT_FOUND:
             return NOT_FOUND
-        print(album_id)
         if tracks != []:
             for index, track in enumerate(tracks):
                 self.db.execute("INSERT OR IGNORE INTO tracks (title, track_num, album_id) VALUES (?, ?, ?)", (track, index+1, album_id))
@@ -75,15 +83,35 @@ class DbFunctions():
         :param album: The name of the album to match the name of
         :returns: The artist ID of the first match between album name and artist name.
         """
-        album_name_match = self.db.execute(
-            "SELECT album_title, artist_id, album_id FROM albums WHERE album_title = (?)", (album,)).fetchall()
+        album_name_match = self.db.execute("SELECT artist_id, album_id FROM albums WHERE album_title = (?)", (album,)).fetchall()
         for matches in album_name_match:
-            artist_check = self.db.execute(
-                "SELECT name FROM artists WHERE artist_id = (?)", (matches[1],)).fetchone()
+            artist_check = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (matches[0],)).fetchone()
             if artist_check[0] == artist:
-                return matches[2]
+                return matches[1]
             else:
-                return NOT_FOUND
+                continue
+
+    def view_unparsed_artists(self):
+        """
+        View all artists that are not yet parsed
+
+        :return: Returns a list of the artists that have a False for the isparsed flag
+        """
+        result = self.db.execute("SELECT name FROM artists WHERE isparsed = (?)", (0,)).fetchall()
+        return result
+
+    def view_unparsed_albums(self):
+        """
+        View all artists that are not yet parsed
+
+        :return: Returns a list of tuples for each artist that have a False for the isparsed flag
+        """
+        result = []
+        unparsed_albums = self.db.execute("SELECT album_title, artist_id FROM albums WHERE isparsed = (?)", (0,)).fetchall()
+        for album in unparsed_albums:
+            artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (album[1],)).fetchone()
+            result.append([album[0], artist_name[0]])
+        return result
 
     def view_artist_albums(self, artist):
         """
