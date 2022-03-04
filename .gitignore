@@ -1,3 +1,2 @@
-
-*.db
 *.pyc
+artist_list*.json
