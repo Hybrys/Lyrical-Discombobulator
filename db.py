@@ -91,7 +91,6 @@ class DbFunctions():
             return NOT_FOUND
 
         if lyrics != "" and lyrics != None:
-            print(f"DB sees these: {lyrics}")
             if track_check != None:
                 self.db.execute("UPDATE tracks SET lyrics = (?), parse_tried = (?) WHERE track_title = (?) AND album_id = (?)", (lyrics, 1, track, album_id))
                 self.database.commit()
@@ -153,9 +152,9 @@ class DbFunctions():
         result = []
         unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS (?) AND parse_tried IS (?)", (None, None)).fetchall()
         for track in unparsed_tracks:
-            album_info = self.db.execute("SELECT album_title, artist_id FROM albums WHERE album_id = (?)", (track[1],)).fetchone()
+            album_info = self.db.execute("SELECT album_title, artist_id, album_id FROM albums WHERE album_id = (?)", (track[1],)).fetchone()
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (album_info[1],)).fetchone()
-            result.append([artist_name[0], album_info[0], track[0]])
+            result.append([artist_name[0], album_info[0], track[0], album_info[2]])
         return result
 
     # Checks for first pass missed tracks
@@ -202,3 +201,6 @@ class DbFunctions():
     # for future unittesting
     def close(self):
         self.database.close()
+
+    def commit(self):
+        self.database.commit()
