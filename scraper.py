@@ -1,16 +1,17 @@
 from bs4 import BeautifulSoup
-from requests_ip_rotator import ApiGateway, ALL_REGIONS
 import re
 import requests
 import db
 import json
 import logging
-
+import time
 
 """TODO
+    INPROGRESS
+    1. Parse lyrics very slowly.
+
     MUSTS
-    1. Parse lyrics with a new website!
-    2. 'Front' 'end'
+    1. 'Front' 'end'
 
     WOULD BE NICE
     1. Handle typeerroring cases
@@ -155,28 +156,28 @@ def parse_tracks(artist, album):
             return tracks
 
 
-def parse_lyrics(artist, track, session):
+def parse_lyrics(artist, track):
+    regex_spec_characters = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
+
     no_space_artist = artist.replace(" ", "").lower()
     no_space_track = track.lower()
-    no_space_track = re.sub(r"[ ,.!@#$%^&*()_+=\-/\\'\":;]", "", no_space_track)
+    no_space_track = re.sub(regex_spec_characters, "", no_space_track)
 
     if artist[0:2].lower() == "a ":
-        no_space_artist = re.sub(r"[ ,.!@#$%^&*()_+=\-/\\'\":;]", "", artist[2:].lower())
+        no_space_artist = re.sub(regex_spec_characters, "", artist[2:].lower())
+    elif artist[0:4].lower() == "the ":
+        no_space_artist = re.sub(regex_spec_characters, "", artist[3:].lower())
 
     featuring_filter = no_space_track.find("feat")
     if featuring_filter != -1:
         no_space_track = no_space_track[0:featuring_filter]
 
-    while True:
-        try:
-            response = session.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
-            break
-        except requests.RequestException:
-            continue
+    response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
 
     if response.status_code != 200:
         logging.critical(f"I'm {response.status_code}ing please send help")
         logging.critical(f"The artist is: {artist}\nThe track is: {track}")
+        return ""
     else:
         soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -269,21 +270,28 @@ for album in dbcur.view_unparsed_albums():
     else:
         logging.info(f"Successfully added {album[0]} had its tracks added to the db.")
 
+for track in dbcur.view_unparsed_tracks():
+    parsed_tracks[track[2]] = parse_lyrics(track[0], track[2])
+    print(f"track name: {track}")
+    print(f"intended lyrics: {parsed_tracks[track[2]]}")
+    resp = dbcur.add_track_lyrics(track[0], track[1], track[2], parsed_tracks[track[2]])
+    if resp == db.NOT_FOUND:
+        logging.critical(f"Either the track {track[2]} or the album {track[1]} from artist {track[0]} was not found!")
+    elif resp == db.NO_ITEM_TO_ADD:
+        logging.error(f"The track {track[2]} on album {track[1]} from artist {track[0]} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+    else:
+        logging.info(f"Successfully added {track[2]}'s lyrics added to the db.")
+    time.sleep(10)
 
-# AZLyrics didn't like me after about 25 requests
-# Even slowing down to one per 5sec resulted in an IP ban in under 1min
-# User_agent modding also had no effect
+# Second pass parsing for first passed empty tracks
+# for track in dbcur.second_pass_empty_tracks():
+#     parsed_tracks[track[2]] = parse_lyrics(track[0], track[2])
 
-with ApiGateway("https://www.azlyrics.com", regions=ALL_REGIONS, access_key_id=, access_key_secret=) as gateway:
-    session = requests.Session()
-    session.mount("https://www.azlyrics.com", gateway)
-    for i, track in enumerate(dbcur.view_unparsed_tracks()):
-        parsed_tracks[track[2]] = parse_lyrics(track[0], track[2], session)
-
-        resp = dbcur.add_track_lyrics(track[0], track[1], track[2], parsed_tracks[track[2]])
-        if resp == db.NOT_FOUND:
-            logging.critical(f"Either the track {track[2]} or the album {track[1]} from artist {track[0]} was not found!")
-        elif resp == db.NO_ITEM_TO_ADD:
-            logging.error(f"The track {track[2]} on album {track[1]} from artist {track[0]} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
-        else:
-            logging.info(f"Successfully added {track[2]}'s lyrics added to the db.")
+#     resp = dbcur.add_track_lyrics(track[0], track[1], track[2], parsed_tracks[track[2]])
+#     if resp == db.NOT_FOUND:
+#         logging.critical(f"Either the track {track[2]} or the album {track[1]} from artist {track[0]} was not found!")
+#     elif resp == db.NO_ITEM_TO_ADD:
+#         logging.error(f"The track {track[2]} on album {track[1]} from artist {track[0]} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+#     else:
+#         logging.info(f"Successfully added {track[2]}'s lyrics added to the db.")
+#     time.sleep(10)
