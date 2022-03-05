@@ -125,7 +125,10 @@ class DbFunctions():
 
         :return: Returns a list of the artists that have a False for the isparsed flag
         """
-        result = self.db.execute("SELECT name FROM artists WHERE isparsed = (?)", (0,)).fetchall()
+        result = []
+        artists = self.db.execute("SELECT name FROM artists WHERE isparsed = (?)", (0,)).fetchall()
+        for artist in artists:
+            result.append(artist[0])
         return result
 
     def view_unparsed_albums(self):
@@ -138,7 +141,7 @@ class DbFunctions():
         unparsed_albums = self.db.execute("SELECT album_title, artist_id FROM albums WHERE isparsed = (?)", (0,)).fetchall()
         for album in unparsed_albums:
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (album[1],)).fetchone()
-            result.append([album[0], artist_name[0]])
+            result.append([artist_name[0], album[0]])
         return result
 
     # Checks for first pass missed tracks
@@ -152,9 +155,9 @@ class DbFunctions():
         result = []
         unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS (?) AND parse_tried IS (?)", (None, None)).fetchall()
         for track in unparsed_tracks:
-            album_info = self.db.execute("SELECT album_title, artist_id, album_id FROM albums WHERE album_id = (?)", (track[1],)).fetchone()
+            album_info = self.db.execute("SELECT album_title, artist_id FROM albums WHERE album_id = (?)", (track[1],)).fetchone()
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (album_info[1],)).fetchone()
-            result.append([artist_name[0], album_info[0], track[0], album_info[2]])
+            result.append([artist_name[0], album_info[0], track[0]])
         return result
 
     # Checks for first pass missed tracks
