@@ -182,10 +182,15 @@ class DbFunctions():
         :param artist: Artist name as a string
         :return: Returns a list of the artists albums, or NOT_FOUND if there are none.
         """
-        artist_id = self.db.execute("SELECT artist_id FROM artists WHERE name = (?)", (artist,))
-        result = self.db.execute("SELECT title FROM albums WHERE artist_id = (?)", (artist_id,)).fetchall()
-        if result == []:
+        result = []
+        artist_id = self.db.execute(f"SELECT name, artist_id FROM artists WHERE name LIKE (?)", ("%"+artist+"%",)).fetchone()
+        if artist_id == None:
             return NOT_FOUND
+        dbresult = self.db.execute("SELECT album_title FROM albums WHERE artist_id = (?)", (artist_id[1],)).fetchall()
+        if dbresult == None:
+            return NOT_FOUND
+        for res in dbresult:
+            result.append([artist_id[0], res[0]])
         return result
 
     def view_album_tracks(self, album):

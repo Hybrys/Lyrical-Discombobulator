@@ -206,7 +206,7 @@ def second_parse_lyrics(artist, track):
     if "instrumental" in track:
         return ""
 
-    no_space_artist = artist.replace(" ", "-").lower()
+    no_space_artist = re.sub(regex_spec_characters, "", artist.replace(" ", "-").lower())
     no_space_track = re.sub(regex_spec_characters, "", track.replace(" ", "-").lower())
 
     if artist[0:2].lower() == "a ":
@@ -221,6 +221,15 @@ def second_parse_lyrics(artist, track):
     # special case handling
     if no_space_artist == "mute-math":
         no_space_artist = "mutemath"
+
+    if no_space_artist[0] == "-":
+        no_space_artist = no_space_artist[1:]
+
+    if "--" in no_space_artist:
+        no_space_artist = no_space_artist.replace("--", "-")
+
+    if "--" in no_space_track:
+        no_space_track = no_space_track.replace("--", "-")
 
     response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
     if response.status_code == 404:
