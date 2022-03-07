@@ -175,8 +175,11 @@ def parse_lyrics(artist, track):
     featuring_filter = no_space_track.find("feat")
     if featuring_filter != -1:
         no_space_track = no_space_track[0:featuring_filter]
+    try:
+        response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
+    except requests.exceptions.TooManyRedirects:
+        return ""
 
-    response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
     if response.status_code == 404:
         if "(" in track:
             parenindex = track.find("(")
@@ -343,9 +346,9 @@ multiplexing = 0
 for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
     multiplexing += 1
     if multiplexing % 2 == 0:
-        parsed_tracks = parse_lyrics(artist_name, track_title)
-    else:
         parsed_tracks = second_parse_lyrics(artist_name, track_title)
+    else:
+        parsed_tracks = parse_lyrics(artist_name, track_title)
     resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
     if resp == db.NOT_FOUND:
         logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
