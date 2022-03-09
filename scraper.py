@@ -175,10 +175,8 @@ def parse_lyrics(artist, track):
     featuring_filter = no_space_track.find("feat")
     if featuring_filter != -1:
         no_space_track = no_space_track[0:featuring_filter]
-    try:
-        response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
-    except requests.exceptions.TooManyRedirects:
-        return ""
+
+    response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
 
     if response.status_code == 404:
         if "(" in track:
@@ -228,8 +226,9 @@ def second_parse_lyrics(artist, track):
     if no_space_artist[0] == "-":
         no_space_artist = no_space_artist[1:]
 
-    if no_space_track[-1] == "-":
-        no_space_track = no_space_track[:-1]
+    if no_space_track != "":
+        if no_space_track[-1] == "-":
+            no_space_track = no_space_track[:-1]
 
     if "--" in no_space_artist:
         no_space_artist = no_space_artist.replace("--", "-")
@@ -237,15 +236,19 @@ def second_parse_lyrics(artist, track):
     if "--" in no_space_track:
         no_space_track = no_space_track.replace("--", "-")
 
-    response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
-    if response.status_code == 404:
-        if "(" in track:
-            parenindex = track.find("(")
-            no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].replace(" ", "-").lower())
-            no_space_track = no_space_track.replace("--", "-")
-            if no_space_track[-1] == "-":
-                no_space_track = no_space_track[:-1]
-            response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
+    try:
+        response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
+        if response.status_code == 404:
+            if "(" in track:
+                parenindex = track.find("(")
+                no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].replace(" ", "-").lower())
+                no_space_track = no_space_track.replace("--", "-")
+                if no_space_track != "":
+                    if no_space_track[-1] == "-":
+                        no_space_track = no_space_track[:-1]
+                response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
+    except requests.exceptions.TooManyRedirects:
+        return ""
 
     if response.status_code != 200:
         logging.critical(f"I'm {response.status_code}ing please send help")
@@ -349,12 +352,23 @@ multiplexing = 0
 #     else:
 #         logging.info(f"Successfully added {album_title} had its tracks added to the db.")
 
-for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
-    multiplexing += 1
-    if multiplexing % 2 == 0:
-        parsed_tracks = second_parse_lyrics(artist_name, track_title)
-    else:
-        parsed_tracks = parse_lyrics(artist_name, track_title)
+# for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
+#     multiplexing += 1
+#     if multiplexing % 2 == 0:
+#     parsed_tracks = second_parse_lyrics(artist_name, track_title)
+#     else:
+#     parsed_tracks = parse_lyrics(artist_name, track_title)
+#     resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
+#     if resp == db.NOT_FOUND:
+#         logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
+#     elif resp == db.NO_ITEM_TO_ADD:
+#         logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+#     else:
+#         logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
+#     time.sleep(5)
+
+for artist_name, album_title, track_title in dbcur.second_pass_empty_tracks():
+    parsed_tracks = parse_lyrics(artist_name, track_title)
     resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
     if resp == db.NOT_FOUND:
         logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
@@ -362,4 +376,4 @@ for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
         logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
     else:
         logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
-    time.sleep(5)
+    time.sleep(10)

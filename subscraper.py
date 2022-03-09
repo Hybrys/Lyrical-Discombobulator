@@ -25,7 +25,8 @@ def parse_table(uri):
         nexter = element.td.find_next_sibling("td")
 
         # Forward slashes were giving issues for obvious uri interference reasons, so I've decided to eliminate them as possible options for now
-        if nexter != None and nexter.a != None and nexter.a.text != "Albums" and "/" not in nexter.a.text:
+        # Second odd case - the band '!!!' was also giving major issues, so we're going to dismiss them for now.
+        if nexter != None and nexter.a != None and nexter.a.text != "Albums" and "/" not in nexter.a.text and nexter.a.text != "!!!":
             result.append(nexter.a.text)
     return result
 
