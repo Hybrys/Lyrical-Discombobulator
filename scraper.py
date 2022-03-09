@@ -228,6 +228,9 @@ def second_parse_lyrics(artist, track):
     if no_space_artist[0] == "-":
         no_space_artist = no_space_artist[1:]
 
+    if no_space_track[-1] == "-":
+        no_space_track = no_space_track[:-1]
+
     if "--" in no_space_artist:
         no_space_artist = no_space_artist.replace("--", "-")
 
@@ -239,6 +242,9 @@ def second_parse_lyrics(artist, track):
         if "(" in track:
             parenindex = track.find("(")
             no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].replace(" ", "-").lower())
+            no_space_track = no_space_track.replace("--", "-")
+            if no_space_track[-1] == "-":
+                no_space_track = no_space_track[:-1]
             response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
 
     if response.status_code != 200:
