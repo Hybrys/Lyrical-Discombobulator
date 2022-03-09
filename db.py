@@ -172,7 +172,7 @@ class DbFunctions():
         for track in unparsed_tracks:
             album_info = self.db.execute("SELECT album_title, artist_id FROM albums WHERE album_id = (?)", (track[1],)).fetchone()
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = (?)", (album_info[1],)).fetchone()
-            result.append([artist_name[0], album_info[0], track[0]])
+            result.append([artist_name[0], album_info[0], track[0], track[1]])
         return result
 
     def view_artist_albums(self, artist):
