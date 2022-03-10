@@ -26,7 +26,8 @@ def parse_table(uri):
 
         # Forward slashes were giving issues for obvious uri interference reasons, so I've decided to eliminate them as possible options for now
         # Second odd case - the band '!!!' was also giving major issues, so we're going to dismiss them for now.
-        if nexter != None and nexter.a != None and nexter.a.text != "Albums" and "/" not in nexter.a.text and nexter.a.text != "!!!":
+        # Third odd case - the jazz composer 'Anthony Braxton'.  The parsing catches something like 120 albums and 500+ tracks, all of which are instrumental, including some really funky names.  Lets get these out of here.
+        if nexter != None and nexter.a != None and nexter.a.text != "Albums" and "/" not in nexter.a.text and nexter.a.text != "!!!" and nexter.a.text != "Anthony Braxton":
             result.append(nexter.a.text)
     return result
 

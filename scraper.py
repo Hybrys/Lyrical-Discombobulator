@@ -6,22 +6,6 @@ import json
 import logging
 import time
 
-"""TODO
-    INPROGRESS
-    1. Parse lyrics very slowly.
-
-    MUSTS
-    1. 'Front' 'end'
-
-    WOULD BE NICE
-    1. Oh my god unittesting
-    2. Handle typeerroring cases
-    3. Create handler for cases that are not properly parsing for later analysis (DB?)
-    4. Backtracking refactor (parse whole pages)
-    5. Add timecodes to tracks
-    6. Swap the parser from html.parser to lxml for ~25% speedup on wiki parses
-"""
-
 
 def parse_album(artist):
     albums = []
@@ -314,57 +298,36 @@ logging.basicConfig(level=logging.DEBUG)
 dbcur = db.DbFunctions()
 
 
-class Parsing():
-    def __init__(self):
-        self.multiplexing = 0
-        # self.artists = None
-        # self.unparsed_artists = None
-        # self.unparsed_albums = None
-        # self.unparsed_tracks = None
+def add_artists(artists=None):
+    if artists == None:
+        artistjson = open("master_artist_list.json")
+        artistdata = json.load(artistjson)
+        artists = artistdata["artists"]
 
-        # Manual override for focused testing
-        # artists = ["Bright Eyes", "Lotus Child",
-        #    "Thursday"]
-        # artists = ["Bright Eyes"]
+    for artist in artists:
+        resp = dbcur.add_artist(artist)
+    if resp == db.NAME_COLLIDED:
+        logging.debug(f"I collided with a name in the db for {artist}")
+    else:
+        logging.info(f"Successfully added {artist} to the db.")
 
-    def add_artists(self, artists=None):
-        if artists == None:
-            artistjson = open("master_artist_list.json")
-            artistdata = json.load(artistjson)
-            artists = artistdata["artists"]
 
-        for artist in artists:
-            resp = dbcur.add_artist(artist)
-        if resp == db.NAME_COLLIDED:
-            logging.debug(f"I collided with a name in the db for {artist}")
-        else:
-            logging.info(f"Successfully added {artist} to the db.")
+def get_albums(artists=None):
+    if artists == None:
+        artists = dbcur.view_unparsed_artists()
 
-    def get_albums(self, artists=None):
-        if artists == None:
-            artists = dbcur.view_unparsed_artists()
+    for artist in artists:
+        parsed_albums = parse_album(artist)
+        resp = dbcur.add_artist_albums(artist, parsed_albums)
+    if resp == db.NOT_FOUND:
+        logging.critical(f"The album list for artist {artist[0]} were not found while trying to add tracks to the database!")
+    else:
+        logging.info(f"Successfully added albums for {artist[0]}")
 
-        for artist in artists:
-            parsed_albums = parse_album(artist)
-            resp = dbcur.add_artist_albums(artist, parsed_albums)
-        if resp == db.NOT_FOUND:
-            logging.critical(f"The album list for artist {artist[0]} were not found while trying to add tracks to the database!")
-        else:
-            logging.info(f"Successfully added albums for {artist[0]}")
 
-    def get_tracks(self, artist_name=None, album_name=None):
-        if artist_name == None or album_name == None:
-            for artist_name, album_title in dbcur.view_unparsed_albums():
-                parsed_albums = parse_tracks(artist_name, album_title)
-                resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
-                if resp == db.NOT_FOUND:
-                    logging.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
-                elif resp == db.NO_ITEM_TO_ADD:
-                    logging.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
-                else:
-                    logging.info(f"Successfully added {album_title} had its tracks added to the db.")
-
-        else:
+def get_tracks(artist_name=None, album_name=None):
+    if artist_name == None or album_name == None:
+        for artist_name, album_title in dbcur.view_unparsed_albums():
             parsed_albums = parse_tracks(artist_name, album_title)
             resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
             if resp == db.NOT_FOUND:
@@ -374,11 +337,50 @@ class Parsing():
             else:
                 logging.info(f"Successfully added {album_title} had its tracks added to the db.")
 
-    def get_lyrics(self, artist_name=None, album_title=None, track_title=None):
-        if artist_name == None or album_title == None or track_title == None:
-            for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
-                self.multiplexing += 1
-                if self.multiplexing % 2 == 0:
+    else:
+        parsed_albums = parse_tracks(artist_name, album_title)
+        resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
+        if resp == db.NOT_FOUND:
+            logging.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
+        elif resp == db.NO_ITEM_TO_ADD:
+            logging.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
+        else:
+            logging.info(f"Successfully added {album_title} had its tracks added to the db.")
+
+
+def get_lyrics(artist_name=None, album_title=None, track_title=None):
+    multiplexing = 0
+    if artist_name == None or album_title == None or track_title == None:
+        for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
+            multiplexing += 1
+            if multiplexing % 2 == 0:
+                parsed_tracks = parse_azlyrics(artist_name, track_title)
+            else:
+                parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
+            resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
+            if resp == db.NOT_FOUND:
+                logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
+            elif resp == db.NO_ITEM_TO_ADD:
+                logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+            else:
+                logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
+            time.sleep(5)
+    else:
+        if type(track_title) != list:
+            parsed_tracks = parse_azlyrics(artist_name, track_title)
+            if parsed_tracks == "":
+                parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
+            resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
+            if resp == db.NOT_FOUND:
+                logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
+            elif resp == db.NO_ITEM_TO_ADD:
+                logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+            else:
+                logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
+        else:
+            for track in track_title:
+                multiplexing += 1
+                if multiplexing % 2 == 0:
                     parsed_tracks = parse_azlyrics(artist_name, track_title)
                 else:
                     parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
@@ -390,42 +392,23 @@ class Parsing():
                 else:
                     logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
                 time.sleep(5)
+
+
+def second_pass_lyrics():
+    for artist_name, album_title, track_title, album_id in dbcur.second_pass_empty_tracks():
+        parsed_tracks = parse_azlyrics(artist_name, track_title)
+        resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
+        if resp == db.NOT_FOUND:
+            logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
+        elif resp == db.NO_ITEM_TO_ADD:
+            logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
         else:
-            if type(track_title) != list:
-                parsed_tracks = parse_azlyrics(artist_name, track_title)
-                if parsed_tracks == "":
-                    parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
-                resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-                if resp == db.NOT_FOUND:
-                    logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-                elif resp == db.NO_ITEM_TO_ADD:
-                    logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
-                else:
-                    logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
-            else:
-                for track in track_title:
-                    self.multiplexing += 1
-                    if self.multiplexing % 2 == 0:
-                        parsed_tracks = parse_azlyrics(artist_name, track_title)
-                    else:
-                        parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
-                    resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-                    if resp == db.NOT_FOUND:
-                        logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-                    elif resp == db.NO_ITEM_TO_ADD:
-                        logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
-                    else:
-                        logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
-                    time.sleep(5)
+            logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
+        time.sleep(10)
 
 
-for artist_name, album_title, track_title in dbcur.second_pass_empty_tracks():
-    parsed_tracks = parse_azlyrics(artist_name, track_title)
-    resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-    if resp == db.NOT_FOUND:
-        logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-    elif resp == db.NO_ITEM_TO_ADD:
-        logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
-    else:
-        logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
-    time.sleep(10)
+# add_artists()
+# get_albums()
+# get_tracks()
+# get_lyrics()
+second_pass_lyrics()

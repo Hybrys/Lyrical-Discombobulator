@@ -4,6 +4,7 @@ NOT_FOUND = 0
 NAME_COLLIDED = 1
 NO_ITEM_TO_ADD = 2
 SUCCESS_NO_RESPONSE = 3
+MANY_FOUND = 4
 
 
 class DbFunctions():
@@ -180,10 +181,10 @@ class DbFunctions():
         View all of an artists albums
 
         :param artist: Artist name as a string
-        :return: Returns a list of the artists albums, or NOT_FOUND if there are none.
+        :return: Returns a list of lists, with each list containing the artist name and one album, or NOT_FOUND if there are none.
         """
         result = []
-        artist_id = self.db.execute(f"SELECT name, artist_id FROM artists WHERE name LIKE (?)", ("%"+artist+"%",)).fetchone()
+        artist_id = self.db.execute(f"SELECT name, artist_id FROM artists WHERE lowercase_name = (?)", (artist,)).fetchone()
         if artist_id == None:
             return NOT_FOUND
         dbresult = self.db.execute("SELECT album_title FROM albums WHERE artist_id = (?)", (artist_id[1],)).fetchall()
@@ -193,6 +194,22 @@ class DbFunctions():
             result.append([artist_id[0], res[0]])
         return result
 
+    def view_artist_albums_fuzzy(self, artist):
+        """
+        View all of an artists albums matching closest to the searched terms
+
+        :param artist: Artist name as a string
+        :return: Returns a list of potential artist matches.
+        """
+        result = []
+        artist_id = self.db.execute(f"SELECT name, artist_id FROM artists WHERE lowercase_name LIKE (?)", ("%"+artist+"%",)).fetchall()
+        if artist_id != None:
+            for artist in artist_id:
+                result.append([artist[0]])
+        if artist_id == None:
+            return NOT_FOUND
+        return result
+
     def view_album_tracks(self, album):
         """
         View all of an albums tracks
@@ -200,9 +217,79 @@ class DbFunctions():
         :param artist: Album name as a string
         :return: Returns a list of the tracks from that album, or NOT_FOUND if there are none.
         """
-        album_id = self.db.execute("SELECT album_id FROM albums WHERE name = (?)", (album,))
-        result = self.db.execute("SELECT track_title FROM tracks WHERE album_id = (?)", (album_id,)).fetchall()
+        result = []
+        album_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_album_title = (?)", (album,)).fetchone()
+        if album_id == None:
+            return NOT_FOUND
+        tracks = self.db.execute("SELECT track_title FROM tracks WHERE album_id = (?)", (album_id[0],)).fetchall()
+        for track in tracks:
+            result.append([album_id[1], album_id[2], track])
         if result == []:
+            return NOT_FOUND
+        return result
+
+    def view_album_tracks_fuzzy(self, album):
+        """
+        View all of an albums tracks
+
+        :param artist: Album name as a string
+        :return: Returns a list of the tracks from that album, or NOT_FOUND if there are none.
+        """
+        result = []
+        artist_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_album_title LIKE (?)", ("%"+album+"%",)).fetchall()
+
+        if artist_id != None:
+            for artist in artist_id:
+                result.append([artist_id[0]])
+        else:
+            return NOT_FOUND
+        return result
+
+    def view_track_lyrics(self, track, artist, album):
+        """
+        View a tracks lyrics
+
+        :param track: Track name as a string
+        :param artist: Artist name as a string
+        :param album: Album name as a string
+        :return: Returns a check statement, and then either a list of track title, lyrics, artist name, and album title.
+        """
+        result = []
+        if artist == "!" and album == "!":
+            query = self.db.execute(
+                "SELECT track_title, lyrics, name, album_title FROM tracks JOIN albums ON tracks.album_id = albums.album_id JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_track_title = (?)", (track,)).fetchall()
+            if query == None:
+                return NOT_FOUND, None
+            elif len(query) > 1:
+                for res in query:
+                    result.append([res[0], res[2], res[3]])
+                return MANY_FOUND, result
+            else:
+                return SUCCESS_NO_RESPONSE, [query[0]]
+
+        elif artist != "!" and album != "!":
+            query = self.db.execute(
+                "SELECT track_title, lyrics, name, album_title FROM tracks JOIN albums ON tracks.album_id = albums.album_id JOIN artists ON albums.artist_id = artists.artist_id WHERE artists.lowercase_name = (?) AND albums.lowercase_album_title = (?) AND lowercase_track_title = (?)", (artist, album, track)).fetchone()
+            if query == None:
+                return NOT_FOUND, None
+            return SUCCESS_NO_RESPONSE, [query]
+        else:
+            return NOT_FOUND, None
+
+    def view_track_lyrics_fuzzy(self, album):
+        """
+        View all of an albums tracks
+
+        :param artist: Album name as a string
+        :return: Returns a list of the tracks from that album, or NOT_FOUND if there are none.
+        """
+        result = []
+        artist_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_album_title LIKE (?)", ("%"+album+"%",)).fetchall()
+
+        if artist_id != None:
+            for artist in artist_id:
+                result.append([artist_id[0]])
+        else:
             return NOT_FOUND
         return result
 

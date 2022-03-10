@@ -58,7 +58,7 @@
                         $("#div1").load("album/" + album);
                         break;
                     case "view_track":
-                        $("#div1").load("track/" + track);
+                        $("#div1").load("track/" + track + "/!/!");
                         break;
                     case "view_lyric":
                         $("#div1").load("lyric/" + lyric);
@@ -70,8 +70,8 @@
         });
     </script>
 
-    <a href=# onclick='$("#div1").load("artist/Death%20Cab%20for%20Cutie")''>Test</a>
-    
+    <a href=# onclick='$("#div1").load("artist/Death%20Cab%20for%20Cutie")'>Test</a>
+
     <label for="function">Select the function:</label>
     <form>
         <select name="function" id="function">
@@ -82,7 +82,7 @@
             <option value="view_lyric">Lookup a word or phrase</option>
         </select>
     </form>
-    
+
     <div class="inputs_div" id="artist_div">
         <label for="artist">Artist:</label>
         <input type="text" id="artist">
