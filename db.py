@@ -205,11 +205,11 @@ class DbFunctions():
         result = []
         print(f"SELECT name, artist_id FROM artists WHERE lowercase_name LIKE {artist}")
         artist_id = self.db.execute("SELECT name, artist_id FROM artists WHERE lowercase_name LIKE (?)", ("%"+artist+"%",)).fetchall()
-        if artist_id != None:
+        if artist_id == []:
+            return NOT_FOUND
+        else:
             for artist in artist_id:
                 result.append([artist[0]])
-        if artist_id == None:
-            return NOT_FOUND
         return result
 
     def view_album_tracks(self, album):
@@ -240,11 +240,11 @@ class DbFunctions():
         result = []
         artist_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_album_title LIKE (?)", ("%"+album+"%",)).fetchall()
 
-        if artist_id != None:
+        if artist_id == []:
+            return NOT_FOUND
+        else:
             for artist in artist_id:
                 result.append(artist)
-        else:
-            return NOT_FOUND
         return result
 
     def view_track_lyrics(self, track, artist, album):
@@ -260,7 +260,7 @@ class DbFunctions():
         if artist == "!" and album == "!":
             query = self.db.execute(
                 "SELECT track_title, lyrics, name, album_title FROM tracks JOIN albums ON tracks.album_id = albums.album_id JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_track_title = (?)", (track,)).fetchall()
-            if query == None:
+            if query == []:
                 return NOT_FOUND, None
             elif len(query) > 1:
                 for res in query:
@@ -288,9 +288,21 @@ class DbFunctions():
         result = []
         artist_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE lowercase_album_title LIKE (?)", ("%"+album+"%",)).fetchall()
 
-        if artist_id != None:
+        if artist_id != []:
             for artist in artist_id:
                 result.append([artist_id[0]])
+        else:
+            return NOT_FOUND
+        return result
+
+    def lyric_lookup(self, searchparam):
+        result = []
+        matches = self.db.execute(
+            "SELECT name, album_title, track_title FROM artists JOIN albums ON artists.artist_id = albums.artist_id JOIN tracks ON albums.album_id = tracks.album_id WHERE lyrics LIKE (?)", ("%"+searchparam+"%",)).fetchall()
+
+        if matches != []:
+            for match in matches:
+                result.append(match)
         else:
             return NOT_FOUND
         return result
