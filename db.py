@@ -5,6 +5,7 @@ NAME_COLLIDED = 1
 NO_ITEM_TO_ADD = 2
 SUCCESS_NO_RESPONSE = 3
 MANY_FOUND = 4
+NO_CONTENT = 5
 
 
 class DbFunctions():
@@ -188,8 +189,8 @@ class DbFunctions():
         if artist_id == None:
             return NOT_FOUND
         dbresult = self.db.execute("SELECT album_title FROM albums WHERE artist_id = (?)", (artist_id[1],)).fetchall()
-        if dbresult == None:
-            return NOT_FOUND
+        if dbresult == []:
+            return NO_CONTENT
         for res in dbresult:
             result.append([artist_id[0], res[0]])
         return result
@@ -202,7 +203,8 @@ class DbFunctions():
         :return: Returns a list of potential artist matches.
         """
         result = []
-        artist_id = self.db.execute(f"SELECT name, artist_id FROM artists WHERE lowercase_name LIKE (?)", ("%"+artist+"%",)).fetchall()
+        print(f"SELECT name, artist_id FROM artists WHERE lowercase_name LIKE {artist}")
+        artist_id = self.db.execute("SELECT name, artist_id FROM artists WHERE lowercase_name LIKE (?)", ("%"+artist+"%",)).fetchall()
         if artist_id != None:
             for artist in artist_id:
                 result.append([artist[0]])
@@ -222,10 +224,10 @@ class DbFunctions():
         if album_id == None:
             return NOT_FOUND
         tracks = self.db.execute("SELECT track_title FROM tracks WHERE album_id = (?)", (album_id[0],)).fetchall()
+        if tracks == []:
+            return NO_CONTENT
         for track in tracks:
             result.append([album_id[1], album_id[2], track])
-        if result == []:
-            return NOT_FOUND
         return result
 
     def view_album_tracks_fuzzy(self, album):
@@ -240,7 +242,7 @@ class DbFunctions():
 
         if artist_id != None:
             for artist in artist_id:
-                result.append([artist_id[0]])
+                result.append(artist)
         else:
             return NOT_FOUND
         return result

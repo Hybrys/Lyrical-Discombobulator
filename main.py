@@ -13,6 +13,7 @@
     7. Swap the parser from html.parser to lxml for ~25% speedup on wiki parses
 """
 
+from cgitb import html
 from unittest import result
 from itty3 import HTML, App, HttpResponse
 from urllib.parse import unquote, quote
@@ -46,17 +47,16 @@ def view_artist(request, artist):
     else:
         response = ["Did you mean one of the following artists?<br/>"]
         searchlen = len(artist)
-        if searchlen <= 5:
+        if searchlen >= 5:
             artist = artist[int(searchlen/2)::]
         check = database.view_artist_albums_fuzzy(artist)
         if check == db.NOT_FOUND:
             return HttpResponse(body="This artist isn't in the database yet!", content_type=HTML)
         for fetched_item in check:
-            print(fetched_item)
             artist = quote(fetched_item[0])
             response.append(f"<br/><a href=# onclick='$(\"#div1\").load(\"artist/{artist}\")'>{fetched_item[0]}</a>")
-            response = "".join(response)
-            return HttpResponse(body=response, content_type=HTML)
+        response = "".join(response)
+        return HttpResponse(body=response, content_type=HTML)
 
 
 @app.get("/album/<str:album>")
@@ -64,7 +64,7 @@ def view_album(request, album):
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
-    if check != db.NOT_FOUND:
+    if check != db.NOT_FOUND and check != db.NO_CONTENT:
         for artist_name, album_title, track in check:
             track_uri = quote(track[0])
             artist_uri = quote(artist_name)
@@ -73,20 +73,22 @@ def view_album(request, album):
         response = "".join(response) + "</table>"
         return HttpResponse(body=response, content_type=HTML)
 
-    else:
-        response = ("Did you mean one of the following albums?\n")
+    elif check == db.NOT_FOUND:
+        response = ["Did you mean one of the following albums?<br />"]
         searchlen = len(album)
-        if searchlen <= 5:
-            album_query = album[int(searchlen/2)::]
-        check = database.view_album_tracks_fuzzy(album_query)
-        print(check)
+        if searchlen >= 5:
+            album = album[int(searchlen/2)::]
+        check = database.view_album_tracks_fuzzy(album)
         if check == db.NOT_FOUND:
             return HttpResponse(body="This album isn't in the database yet!", content_type=HTML)
-        for album in check:
-            album_uri = quote(album)
-            response.append(f"\n<a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{album}</a>")
+        for res_album in check:
+            album_uri = quote(res_album[2])
+            response.append(f"<br /><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{res_album[2]}</a>")
         response = "".join(response)
         return HttpResponse(body=response, content_type=HTML)
+
+    else:
+        return HttpResponse(body=f"The album {album} has no tracks in it yet!  Sorry!", content_type=HTML)
 
 
 @app.get("/track/<str:track>/<str:artist>/<str:album>")
@@ -98,14 +100,13 @@ def view_track(request, track, artist, album):
     check, result = database.view_track_lyrics(track, artist, album)
 
     if check == db.SUCCESS_NO_RESPONSE:
-        print(result)
         for track, lyrics, artist_name, album_title in result:
             lyrics = lyrics.replace("\n", "<br/>")
             response = f"<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr><tr><td>{artist_name}</td><td>{album_title}</td><td>{track}</td></tr></table><br/><br/>{lyrics}"
         response = "".join(response)
         return HttpResponse(body=response, content_type=HTML)
 
-    if check == db.MANY_FOUND:
+    elif check == db.MANY_FOUND:
         response = ["I found a couple of songs with the same name.  Please select the correct one below:", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
         for track, artist_name, album_title in result:
             track_uri = quote(track)
@@ -116,22 +117,7 @@ def view_track(request, track, artist, album):
         return HttpResponse(body=response, content_type=HTML)
 
     else:
-        return HttpResponse(body="How did I even get here?!", content_type=HTML)
-
-    # else:
-    #     response = ("Did you mean one of the following albums?\n")
-    #     searchlen = len(album)
-    #     if searchlen <= 5:
-    #         album_query = album[int(searchlen/2)::]
-    #     check = database.view_album_tracks_fuzzy(album_query)
-    #     print(check)
-    #     if check == db.NOT_FOUND:
-    #         return HttpResponse(body="This album isn't in the database yet!", content_type=HTML)
-    #     for album in check:
-    #         album_uri = quote(album)
-    #         response.append(f"\n<a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{album}</a>")
-    #     response = "".join(response)
-    #     return HttpResponse(body=response, content_type=HTML)
+        return HttpResponse(body="Critical error.  How did you even do this?", content_type=HTML)
 
 
 if __name__ == "__main__":
