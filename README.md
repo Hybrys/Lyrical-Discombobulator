@@ -29,7 +29,7 @@ python3 scraper.py
 
  - Resolve accenting - websites simply drop the accents rather than accepting URI encoded characters
  - Resolve TypeErroring in parse_tracks - this should be raising AttributeErrors if the object doesn't exist, so some conditional type conversion may need to take place to resolve this
- - Implement unittesting functionality
+ - Implement unittesting
  - Allow user-curated input
  - Create handler for parsing only artists that have no albums and albums that have no tracks - use LEFT JOIN on IDs where album_title and track_title IS NULL
  - Move from html.parser to LXML for ~25% speedup
