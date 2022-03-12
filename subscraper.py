@@ -1,11 +1,14 @@
-from bs4 import BeautifulSoup
-import json
-import requests
-
 """
 Subscraper of Acclaimed Music's top 1000 artists
 Splitting from each uri, which contains 200 artists, for easy debugging, and then concatenating with my own list for a 'master list'.
+
+Requires "artist_list6.json" to concatenate
+If the 6th json is not available, line 73's 'join_jsons(6)' must be modified
 """
+
+from bs4 import BeautifulSoup
+import json
+import requests
 
 
 def parse_table(uri):
@@ -46,23 +49,25 @@ def join_jsons(number_of_results):
         artistdata = json.load(artistjson)
         masterlist += artistdata["artists"]
     masterlist_for_json = {
-        "__comment__": "List of around 1000 artists parsed from Acclaimed Music, plus 113 artists from my personal collection", "artists": masterlist}
+        "__comment__": "List of around ~1000 artists parsed from Acclaimed Music, plus 113 artists from my personal collection", "artists": masterlist}
 
     with open(f'master_artist_list.json', 'w') as output:
         json.dump(masterlist_for_json, output, indent=4)
 
 
-result1 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art.htm")
-result2 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art2.htm")
-result3 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art3.htm")
-result4 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art4.htm")
-result5 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art5.htm")
+# Since this is a one-time operation, we'll simply set this into a Name == Main and it can sit here as a runnable code-museum!
+if __name__ == "__main__":
+    result1 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art.htm")
+    result2 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art2.htm")
+    result3 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art3.htm")
+    result4 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art4.htm")
+    result5 = parse_table("http://www.acclaimedmusic.net/061024/1948-09art5.htm")
 
-results = [result1, result2, result3, result4, result5]
-for i, result in enumerate(results):
-    result_for_json = {"artists": result}
+    results = [result1, result2, result3, result4, result5]
+    for i, result in enumerate(results):
+        result_for_json = {"artists": result}
 
-    with open(f'artist_list{i+1}.json', 'w') as output:
-        json.dump(result_for_json, output, indent=4)
+        with open(f'artist_list{i+1}.json', 'w') as output:
+            json.dump(result_for_json, output, indent=4)
 
-join_jsons(6)
+    join_jsons(6)

@@ -1,5 +1,5 @@
 {
-    "__comment__": "List of 1000 artists parsed from Acclaimed Music, plus 113 artists from my personal collection",
+    "__comment__": "List of ~1000 artists parsed from Acclaimed Music, plus 113 artists from my personal collection",
     "artists": [
         "The Beatles",
         "The Rolling Stones",
@@ -670,7 +670,6 @@
         "The Saints",
         "N.E.R.D.",
         "Coolio",
-        "!!!",
         "The Box Tops",
         "The Nitty Gritty Dirt Band",
         "Marty Robbins",
@@ -827,7 +826,6 @@
         "Prefuse 73",
         "The Raspberries",
         "Andrew Hill",
-        "Anthony Braxton",
         "INXS",
         "Peter Frampton",
         "Gerry Mulligan",

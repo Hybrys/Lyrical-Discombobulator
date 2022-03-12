@@ -1,16 +1,11 @@
-"""TODO
-    INPROGRESS
-    1. Parse lyrics very slowly.
-
-    WOULD BE NICE
-    1. Oh my god unittesting
-    2. Better non-unicode handling (oomlots and accents)
-    3. Handle typeerroring cases
-    4. Create handler for cases that are not properly parsing for later analysis
-    5. Backtracking refactor (parse whole pages)
-    6. Add timecodes to tracks
-    7. Swap the parser from html.parser to lxml for ~25% speedup on wiki parses
 """
+Simple frontend for the data gathered by scraper.py utilizing IttyBitty3 for web functionality
+
+Port 4000
+Debug currently True
+"""
+
+# If the app does not quit on KeyboardInterrupt, make a request against the server to get it to unload
 
 from itty3 import HTML, App, HttpResponse
 from urllib.parse import unquote, quote
@@ -22,13 +17,32 @@ database = db.DbFunctions()
 
 @app.get("/")
 def index(request):
+    """
+    Serves the / route with the index.html file included in the project
+
+    This file is a simple HTML / JQuery build, allowing for a psuedo-responsive page that's as lightweight as possible.
+    The index should allow for any cross navigation without needing to leave the single page, and loads any information into a seperate div.
+
+    :param request: Pulls the request from Itty3 for later use/response
+    :return: Returns the webpage using the render() method from Itty3
+    """
     with open("index.html") as index_file:
         result = index_file.read()
-    return app.render(request, result)
+    # return app.render(request, result)
+    return HttpResponse(result, content_type=HTML)
 
 
 @app.get("/artist/<str:artist>")
 def view_artist(request, artist):
+    """
+    Serves the /artist/ route, accepting the next part of the URI as an argument
+
+    The function uses the <str:artist> part of the URI for looking up an artist.  If an exact match is not found, it tries a pseudo-fuzzy search to find relevant partial matches to respond with.  If no matches are found again, it returns a statement to that effect.
+
+    :param request: Pulls the request from Itty3
+    :param artist: Accepts the information in the <str:artist> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the HttpResponse function from Itty3
+    """
     response = ["<table><tr><th>Artist</th><th>Album</th></tr>"]
     artist = unquote(artist)
     check = database.view_artist_albums(artist)
@@ -57,6 +71,15 @@ def view_artist(request, artist):
 
 @app.get("/album/<str:album>")
 def view_album(request, album):
+    """
+    Serves the /album/ route, accepting the next part of the URI as an argument
+
+    The function uses the <str:album> part of the URI for looking up an album title.  If an exact match is not found, it tries a pseudo-fuzzy search to find relevant partial matches to respond with.  If no matches are found again, it returns a statement to that effect.
+
+    :param request: Pulls the request from Itty3
+    :param album: Accepts the information in the <str:album> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the HttpResponse function from Itty3
+    """
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
@@ -89,6 +112,20 @@ def view_album(request, album):
 
 @app.get("/track/<str:track>/<str:artist>/<str:album>")
 def view_track(request, track, artist, album):
+    """
+    Serves the /track/ route, accepting the next parts of the URI as an argument, each between a set of /
+    By default, index.html will only search for the track with the first argument, using '!' to denote "novalue" for the second and third arguments.
+    These arguments are kept for direct linking in the case of name collision of a track title
+
+    The function uses the <str:track> part of the URI for looking up a tracks title.  If more than one match is found, it will return a table of the tracks with their artists and albums, with clickable links to each element.
+    If no matches are found, it then returns a statement to that affect.  If the track has no data in the Lyrics field, it then returns a statement to that affect.
+
+    :param request: Pulls the request from Itty3
+    :param album: Accepts the information in the <str:track> area of the URI, in order to perform the lookup function
+    :param artist: Accepts the information in the <str:artist> area of the URI, in order to perform the lookup function
+    :param album: Accepts the information in the <str:album> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the HttpResponse function from Itty3
+    """
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)
@@ -119,6 +156,16 @@ def view_track(request, track, artist, album):
 
 @app.get("/lyrics/<str:searchparam>")
 def lyric_lookup(request, searchparam):
+    """
+    Serves the /lyrcs/ route, accepting the next part of the URI as an argument
+
+    The function uses the <str:searchparam> part of the URI for looking up a tracks that have lyrics matching the word or phrase.  If it finds any tracks whos lyrics contain searchparam, it will return a table of the tracks with their artists and albums, with clickable links to each element.
+    If no matches are found, it then returns a statement to that affect.
+
+    :param request: Pulls the request from Itty3
+    :param searchparam: Accepts the information in the <str:searchparam> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the HttpResponse function from Itty3
+    """
     searchparam = unquote(searchparam)
     response = [f"These are the tracks that have the word or phrase '{searchparam}' in its lyrics:<br />", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
 
@@ -132,6 +179,14 @@ def lyric_lookup(request, searchparam):
 
 
 def convert_link_strings(artist_name, album_title, track_title):
+    """
+    Helper function for creating the table elements with clickable links
+
+    :param artist_name: The artist name item from the DB response as a string
+    :param album_title: The album title item from the DB response as a string
+    :param track_title: The track_title item from the DB response as a string, or a "!" in cases that the track is irrelevant
+    :return: A list of strings for the artist, album, and track links, built into a single table row
+    """
     result = []
     track_uri = quote(track_title)
     artist_uri = quote(artist_name)
