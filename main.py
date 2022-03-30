@@ -9,10 +9,10 @@ Debug currently True
 
 from itty3 import HTML, App, HttpResponse
 from urllib.parse import unquote, quote
-import db
+import db_sqlite3
 
 app = App()
-database = db.DbFunctions()
+database = db_sqlite3.DbFunctions()
 
 
 @app.get("/")
@@ -46,7 +46,7 @@ def view_artist(request, artist):
     response = ["<table><tr><th>Artist</th><th>Album</th></tr>"]
     artist = unquote(artist)
     check = database.view_artist_albums(artist)
-    if check != db.NOT_FOUND:
+    if check != db_sqlite3.NOT_FOUND:
         for artist_name, album_title in check:
             artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, "!")
             response.append(f"<tr><td>{artist_name}</td>")
@@ -60,7 +60,7 @@ def view_artist(request, artist):
         if searchlen >= 5:
             artist = artist[int(searchlen/2)::]
         check = database.view_artist_albums_fuzzy(artist)
-        if check == db.NOT_FOUND:
+        if check == db_sqlite3.NOT_FOUND:
             return HttpResponse(body="This artist isn't in the database yet!  Maybe we'll add it soon?", content_type=HTML)
         for fetched_item in check:
             artist = quote(fetched_item[0])
@@ -83,7 +83,7 @@ def view_album(request, album):
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
-    if check != db.NOT_FOUND and check != db.NO_CONTENT:
+    if check != db_sqlite3.NOT_FOUND and check != db_sqlite3.NO_CONTENT:
         for artist_name, album_title, track_title in check:
             artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, track_title[0])
             response.append(artist_link)
@@ -92,13 +92,13 @@ def view_album(request, album):
         response = "".join(response) + "</table>"
         return HttpResponse(body=response, content_type=HTML)
 
-    elif check == db.NOT_FOUND:
+    elif check == db_sqlite3.NOT_FOUND:
         response = ["Did you mean one of the following albums?<br />"]
         searchlen = len(album)
         if searchlen >= 5:
             album = album[int(searchlen/2)::]
         check = database.view_album_tracks_fuzzy(album)
-        if check == db.NOT_FOUND:
+        if check == db_sqlite3.NOT_FOUND:
             return HttpResponse(body="This album isn't in the database yet!", content_type=HTML)
         for res_album in check:
             album_uri = quote(res_album[2])
@@ -133,7 +133,7 @@ def view_track(request, track, artist, album):
 
     check, result = database.view_track_lyrics(track, artist, album)
 
-    if check == db.SUCCESS_NO_RESPONSE:
+    if check == db_sqlite3.SUCCESS_NO_RESPONSE:
         for track_title, lyrics, artist_name, album_title in result:
             if lyrics == None:
                 lyrics = f"We don't have lyrics for {track_title} yet!  Sorry!"
@@ -143,7 +143,7 @@ def view_track(request, track, artist, album):
         response = "".join(response)
         return HttpResponse(body=response, content_type=HTML)
 
-    elif check == db.MANY_FOUND:
+    elif check == db_sqlite3.MANY_FOUND:
         response = ["I found a couple of songs with the same name.  Please select the correct one below:", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
         for track_title, artist_name, album_title in result:
             response.extend(convert_link_strings(artist_name, album_title, track_title))
@@ -170,7 +170,7 @@ def lyric_lookup(request, searchparam):
     response = [f"These are the tracks that have the word or phrase '{searchparam}' in its lyrics:<br />", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
 
     check = database.lyric_lookup(searchparam)
-    if check == db.NOT_FOUND:
+    if check == db_sqlite3.NOT_FOUND:
         return HttpResponse(body="I couldn't find any tracks with that word/phrase in it.  Sorry!")
     for artist_name, album_title, track_title in check:
         response.extend(convert_link_strings(artist_name, album_title, track_title))

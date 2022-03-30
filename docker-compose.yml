@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+    pg:
+        container_name: pg_project_env
+        image: postgres:14.2-alpine3.15
+        restart: always
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_HOST_AUTH_METHOD: trust
+            PGUSER: postgres
+        ports:
+            - "5454:5454"
+        volumes:
+            - ./data/:/docker-entrypoint-initdb.d/
+        command: -p 5454
+    pgadmin:
+        container_name: pgadmin_project
+        image: dpage/pgadmin4:latest
+        restart: always
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@example.com
+            PGADMIN_DEFAULT_PASSWORD: admin123
+            PGADMIN_LISTEN_PORT: 5455
+            PGADMIN_CONFIG_SERVER_MODE: "False"
+            PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+            PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: "False"
+        ports:
+            - "5455:5455"
+        depends_on:
+            - pg
+networks:
+    default:
+        name: localnet
