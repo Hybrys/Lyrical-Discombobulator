@@ -198,4 +198,4 @@ def convert_link_strings(artist_name, album_title, track_title):
 
 
 if __name__ == "__main__":
-    app.run(port=4000, debug=True)
+    app.run(addr="0.0.0.0", port=4000, debug=True)

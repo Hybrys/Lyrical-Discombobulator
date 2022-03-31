@@ -23,7 +23,7 @@ TODO:
 from bs4 import BeautifulSoup
 import re
 import requests
-import db_sqlite3
+from db_postgres import *
 import json
 import logging
 import time
@@ -364,7 +364,7 @@ def add_artists(artists: list = []):
 
     for artist in artists:
         resp = dbcur.add_artist(artist)
-    if resp == db_sqlite3.NAME_COLLIDED:
+    if resp == NAME_COLLIDED:
         logging.debug(f"I collided with a name in the db for {artist}")
     else:
         logging.info(f"Successfully added {artist} to the db.")
@@ -382,7 +382,7 @@ def get_albums(artists: list = []):
     for artist in artists:
         parsed_albums = parse_album(artist)
         resp = dbcur.add_artist_albums(artist, parsed_albums)
-    if resp == db_sqlite3.NOT_FOUND:
+    if resp == NOT_FOUND:
         logging.critical(f"The album list for artist {artist[0]} were not found while trying to add tracks to the database!")
     else:
         logging.info(f"Successfully added albums for {artist[0]}")
@@ -401,9 +401,9 @@ def get_tracks(artist_name: str = "", album_title: str = ""):
         for artist_name, album_title in dbcur.view_unparsed_albums():
             parsed_albums = parse_tracks(artist_name, album_title)
             resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
-            if resp == db_sqlite3.NOT_FOUND:
+            if resp == NOT_FOUND:
                 logging.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
-            elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+            elif resp == NO_ITEM_TO_ADD:
                 logging.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
             else:
                 logging.info(f"Successfully added {album_title} had its tracks added to the db.")
@@ -411,9 +411,9 @@ def get_tracks(artist_name: str = "", album_title: str = ""):
     else:
         parsed_albums = parse_tracks(artist_name, album_title)
         resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
-        if resp == db_sqlite3.NOT_FOUND:
+        if resp == NOT_FOUND:
             logging.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
-        elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+        elif resp == NO_ITEM_TO_ADD:
             logging.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
         else:
             logging.info(f"Successfully added {album_title} had its tracks added to the db.")
@@ -438,9 +438,9 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
             else:
                 parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
             resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-            if resp == db_sqlite3.NOT_FOUND:
+            if resp == NOT_FOUND:
                 logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-            elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+            elif resp == NO_ITEM_TO_ADD:
                 logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
             else:
                 logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
@@ -452,9 +452,9 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
             if parsed_tracks == "":
                 parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
             resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-            if resp == db_sqlite3.NOT_FOUND:
+            if resp == NOT_FOUND:
                 logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-            elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+            elif resp == NO_ITEM_TO_ADD:
                 logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
             else:
                 logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
@@ -466,9 +466,9 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
                 else:
                     parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
                 resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-                if resp == db_sqlite3.NOT_FOUND:
+                if resp == NOT_FOUND:
                     logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-                elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+                elif resp == NO_ITEM_TO_ADD:
                     logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
                 else:
                     logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
@@ -486,9 +486,9 @@ def second_pass_lyrics():
         parsed_tracks = parse_azlyrics(artist_name, track_title)
         # parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
         resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
-        if resp == db_sqlite3.NOT_FOUND:
+        if resp == NOT_FOUND:
             logging.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
-        elif resp == db_sqlite3.NO_ITEM_TO_ADD:
+        elif resp == NO_ITEM_TO_ADD:
             logging.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
         else:
             logging.info(f"Successfully added {track_title}'s lyrics added to the db.")
@@ -505,10 +505,10 @@ Log level remains on 'debug' to see verbose network traffic generated by Request
 """
 
 logging.basicConfig(level=logging.DEBUG)
-dbcur = db_sqlite3.DbFunctions()
+dbcur = DbFunctions()
 
 # add_artists()
 # get_albums()
 # get_tracks()
 # get_lyrics()
-second_pass_lyrics()
+# second_pass_lyrics()

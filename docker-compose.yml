@@ -28,6 +28,17 @@ services:
             - "5455:5455"
         depends_on:
             - pg
+
+    webapp:
+        container_name: project_webserv
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "4000:4000"
+        depends_on:
+            - pg
+
 networks:
     default:
         name: localnet

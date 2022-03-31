@@ -14,13 +14,13 @@ NO_CONTENT = 5
 
 
 class DbFunctions():
-    def __init__(self, dbloc="postgresql+pg8000://postgres:@localhost:5454/database"):
+    def __init__(self, dbloc="pg"):
         """
         Initialize the database for use - create the tables and file if it doesn't exist.
 
         :param filename: Optional param for using a test database
         """
-        self.database = create_engine(dbloc)
+        self.database = create_engine(f"postgresql+pg8000://postgres:@{dbloc}:5454/database")
         self.db = Session(self.database)
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name))")

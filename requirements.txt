@@ -1,0 +1,7 @@
+###### Requirements - Versions not specified for latest ver
+
+beautifulsoup4
+itty3
+sqlalchemy
+pg8000
+requests

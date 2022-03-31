@@ -11,8 +11,11 @@ The database is pre-populated with over 1000 artists and 45000 tracks with lyric
 
 ## Dependancies
 Requires Python 3.8+ (Python 3.10.1 used)
+Requires Docker v18 or higher (docker compose up -d)
+ - Creates Postgres and pgAdmin containers for app usage
 
 Requires Itty3 module for Python (pip install itty3)
+Requires pg8000 module for Python (pip install pg8000)
 
 ## Usage
 #### To run the server:
