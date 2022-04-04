@@ -5,10 +5,12 @@ from sqlalchemy.orm import Session
 
 class DBTesting(unittest.TestCase):
     def setUp(self):
+        print("setting up")
         self.db = DbFunctions(db="test")
         print(self.db)
     
     def tearDown(self):
+        print("tearing down")
         DbFunctions.close()
 
     def test_tests(self):
@@ -31,4 +33,5 @@ def setup_test_db():
     pass
 
 if __name__ == "__main__":
+    print("Hello World")
     unittest.main()
