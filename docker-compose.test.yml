@@ -1,0 +1,40 @@
+version: "3.8"
+name: testingshit
+services:
+    sut:
+        build: .
+        command: python3 main-test.py
+        depends_on:
+            - pg
+            - webapp
+
+    pg:
+        container_name: pg_project_env_test
+        image: postgres:14.2-alpine3.15
+        restart: always
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_HOST_AUTH_METHOD: trust
+            PGUSER: postgres
+        ports:
+            - "5455:5454"
+        volumes:
+            - ./data/:/docker-entrypoint-initdb.d/
+        networks:
+            - testingnet2
+        command: -p 5454
+
+    webapp:
+        container_name: project_webserv_test
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "4000:4000"
+        depends_on:
+            - pg
+
+networks:
+    testingnet2:
+    default:
+        name: testingnet

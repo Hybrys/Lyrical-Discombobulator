@@ -13,6 +13,7 @@ services:
         volumes:
             - ./data/:/docker-entrypoint-initdb.d/
         command: -p 5454
+        
     pgadmin:
         container_name: pgadmin_project
         image: dpage/pgadmin4:latest
@@ -38,6 +39,7 @@ services:
             - "4000:4000"
         depends_on:
             - pg
+        restart: on-failure
 
 networks:
     default:

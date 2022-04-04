@@ -14,13 +14,13 @@ NO_CONTENT = 5
 
 
 class DbFunctions():
-    def __init__(self, dbloc="pg"):
+    def __init__(self, db="database"):
         """
         Initialize the database for use - create the tables and file if it doesn't exist.
 
         :param filename: Optional param for using a test database
         """
-        self.database = create_engine(f"postgresql+pg8000://postgres:@{dbloc}:5454/database")
+        self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{db}")
         self.db = Session(self.database)
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name))")
@@ -345,6 +345,7 @@ class DbFunctions():
         Close database access cleanly.
         Used in future unittesting
         """
+        self.db.close()
         self.database.close()
 
     def commit(self):
