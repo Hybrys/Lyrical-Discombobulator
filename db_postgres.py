@@ -20,7 +20,8 @@ class DbFunctions():
 
         :param filename: Optional param for using a test database
         """
-        self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{db}")
+        # self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{db}")
+        self.database = create_engine(f"postgresql+pg8000://postgres:@localhost:5454/{db}")
         self.db = Session(self.database)
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name))")
@@ -40,7 +41,7 @@ class DbFunctions():
         name_test = self.db.execute("SELECT * FROM artists WHERE name = :name", {"name": artist}).fetchone()
         if name_test == None:
             self.db.execute("INSERT INTO artists (name, isparsed) VALUES (:artist, :isparsed)", {"artist": artist, "isparsed": False})
-            self.database.commit()
+            self.db.commit()
             return SUCCESS_NO_RESPONSE
         else:
             return NAME_COLLIDED
@@ -60,7 +61,7 @@ class DbFunctions():
             for album in albums:
                 self.db.execute("INSERT OR IGNORE INTO albums (album_title, artist_id, isparsed) VALUES (:album, :artist_id, :isparsed)", {"album": album, "artist_id": artist_id, "isparsed": False})
             self.db.execute("UPDATE artists SET isparsed = :isparsed WHERE name = :name", {"isparsed": True, "name": artist[0]})
-            self.database.commit()
+            self.db.commit()
             return SUCCESS_NO_RESPONSE
         else:
             return NO_ITEM_TO_ADD
@@ -83,7 +84,7 @@ class DbFunctions():
             for index, track in enumerate(tracks):
                 self.db.execute("INSERT OR IGNORE INTO tracks (track_title, track_num, album_id) VALUES :track_title, :track_num, :album_id", {"track_title": track, "track_num": index+1, "album_id": album_id})
             self.db.execute("UPDATE albums SET isparsed = :isparsed WHERE album_id = :album_id", {"isparsed": True, "album_id": album_id})
-            self.database.commit()
+            self.db.commit()
             return SUCCESS_NO_RESPONSE
         else:
             return NO_ITEM_TO_ADD
@@ -107,13 +108,13 @@ class DbFunctions():
         if lyrics != "" and lyrics != None:
             if track_check != None:
                 self.db.execute("UPDATE tracks SET lyrics = :lyrics, parse_tried = :parse_tried WHERE track_title = :track_title AND album_id = :album_id", {"lyrics": lyrics, "parse_tried": True, "track_title": track, "album_id": album_id})
-                self.database.commit()
+                self.db.commit()
                 return SUCCESS_NO_RESPONSE
             else:
                 return NOT_FOUND
         else:
             self.db.execute("UPDATE tracks SET parse_tried = :parse_tried WHERE track_title = :track_title AND album_id = :album_id",  {"parse_tried": True, "track_title": track, "album_id": album_id})
-            self.database.commit()
+            self.db.commit()
             return NO_ITEM_TO_ADD
 
     def album_artist_match(self, artist, album):
@@ -242,6 +243,7 @@ class DbFunctions():
             return NOT_FOUND
         tracks = self.db.execute("SELECT track_title FROM tracks WHERE album_id = :album_id", {"album_id": album_id[0]}).fetchall()
         if tracks == []:
+            print("No content bro")
             return NO_CONTENT
         for track in tracks:
             result.append([album_id[1], album_id[2], track])
@@ -346,7 +348,7 @@ class DbFunctions():
         Used in future unittesting
         """
         self.db.close()
-        self.database.close()
+        self.database.dispose()
 
     def commit(self):
         """
@@ -355,4 +357,4 @@ class DbFunctions():
         Self-contained commit functionality, for other packages to commit changes made directly to the database.
         Used in manual_filtering.py
         """
-        self.database.commit()
+        self.db.commit()

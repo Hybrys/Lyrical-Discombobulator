@@ -5,4 +5,3 @@ itty3
 sqlalchemy
 pg8000
 requests
-psycopg2-binary

@@ -1,15 +1,14 @@
 from db_postgres import *
-import unittest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
+import unittest
 
 class DBTesting(unittest.TestCase):
     def setUp(self):
+        setup_test_db()
         self.db = DbFunctions(db="test")
-        print(self.db)
     
     def tearDown(self):
-        DbFunctions.close()
+        self.db.close()
 
     def test_tests(self):
         print("Hello wurld!")
@@ -20,15 +19,20 @@ class DBTesting(unittest.TestCase):
 
     def test_view_artist(self):
         resp = self.db.view_artist_albums("Brand New")
+        print(resp)
         self.assertEqual(resp, NOT_FOUND)
 
-        self.db.add_artist
     
-    def test_add_album(self):
-        resp = self.db.view_artist_albums("")
+    # def test_add_album(self):
+    #     resp = self.db.view_artist_albums("")
 
 def setup_test_db():
-    pass
+    database = create_engine(f"postgresql+pg8000://postgres:@localhost:5454/postgres")
+    with database.connect() as conn:
+        conn.execution_options(isolation_level="AUTOCOMMIT").execute("DROP DATABASE IF EXISTS test")
+        conn.execute("CREATE DATABASE test")
+    database.dispose()
+
 
 if __name__ == "__main__":
     unittest.main()

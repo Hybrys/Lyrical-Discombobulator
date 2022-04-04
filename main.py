@@ -28,7 +28,6 @@ def index(request):
     """
     with open("index.html") as index_file:
         result = index_file.read()
-    # return app.render(request, result)
     return HttpResponse(result, content_type=HTML)
 
 
