@@ -1,4 +1,3 @@
-from sre_constants import SUCCESS
 import db_postgres
 from sqlalchemy import create_engine
 from db_postgres import NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
@@ -252,7 +251,6 @@ def setup_test_db():
         conn.execution_options(isolation_level="AUTOCOMMIT").execute("DROP DATABASE IF EXISTS test")
         conn.execute("CREATE DATABASE test")
     database.dispose()
-
 
 if __name__ == "__main__":
     unittest.main()
