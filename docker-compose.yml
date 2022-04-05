@@ -11,7 +11,7 @@ services:
         ports:
             - "5454:5454"
         volumes:
-            - ./data/:/docker-entrypoint-initdb.d/
+            - ./db/data/:/docker-entrypoint-initdb.d/
         command: -p 5454
         
     pgadmin:

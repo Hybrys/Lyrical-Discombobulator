@@ -20,10 +20,15 @@ TODO:
 7. Consider edge-case handling by headless chrome instance (Playwright)
 """
 
+# Resolve modules not loading
+import os
+import sys
+sys.path.append(os.getcwd())
+
 from bs4 import BeautifulSoup
 import re
 import requests
-from db_postgres import *
+from db.db_postgres import *
 import json
 import logging
 import time

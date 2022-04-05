@@ -11,7 +11,11 @@ COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 COPY *.json .
-COPY index.html index.html
-COPY *.py .
+COPY ./server/index.html ./server/index.html
+COPY ./scraper/*.py ./scraper/
+COPY ./db/*.py ./db/
+COPY ./tests/*.py ./tests/
+COPY ./server/*.py ./server/
 
-CMD ["python3", "main.py"]
+# CMD ["ls", "-la"]
+CMD ["python3", "./server/main.py"]

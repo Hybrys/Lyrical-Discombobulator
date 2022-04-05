@@ -5,9 +5,14 @@ Port 4000
 Debug currently True
 """
 
+# Resolve modules not loading
+import os
+import sys
+sys.path.append(os.getcwd())
+
 from flask import Flask, Response
 from urllib.parse import unquote, quote
-from db_postgres import *
+from db.db_postgres import *
 
 app = Flask(__name__)
 database = DbFunctions()
@@ -22,7 +27,7 @@ def index():
 
     :return: Returns the webpage using the Response() class from Flask
     """
-    with open("index.html") as index_file:
+    with open("./server/index.html") as index_file:
         result = index_file.read()
     return Response(result)
 

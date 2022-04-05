@@ -1,13 +1,18 @@
-import db_postgres
-from sqlalchemy import create_engine
-from db_postgres import NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
-from os import environ
+
+# Resolve modules not loading
+import os
+import sys
+sys.path.append(os.getcwd())
+
 import unittest
+from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
+from sqlalchemy import create_engine
+
 
 class DBTesting(unittest.TestCase):
     def setUp(self):
         setup_test_db()
-        self.db = db_postgres.DbFunctions(db="test")
+        self.db = DbFunctions(db="test")
     
     def tearDown(self):
         self.db.close()
@@ -242,7 +247,7 @@ class DBTesting(unittest.TestCase):
 
 def setup_test_db():
     # Find out if I'm containerized
-    container_check = environ.get('CONTAINER_DB')
+    container_check = os.environ.get('CONTAINER_DB')
     if container_check:
         database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/postgres")
     else:
