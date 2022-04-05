@@ -383,9 +383,9 @@ def get_albums(artists: list = []):
         parsed_albums = parse_album(artist)
         resp = dbcur.add_artist_albums(artist, parsed_albums)
     if resp == NOT_FOUND:
-        logging.critical(f"The album list for artist {artist[0]} were not found while trying to add tracks to the database!")
+        logging.critical(f"The album list for artist {artist} were not found while trying to add tracks to the database!")
     else:
-        logging.info(f"Successfully added albums for {artist[0]}")
+        logging.info(f"Successfully added albums for {artist}")
 
 
 def get_tracks(artist_name: str = "", album_title: str = ""):
@@ -482,7 +482,7 @@ def second_pass_lyrics():
 
     This function takes no parameters and returns no information.
     """
-    for artist_name, album_title, track_title, album_id in dbcur.second_pass_empty_tracks():
+    for artist_name, album_title, track_title in dbcur.second_pass_empty_tracks():
         parsed_tracks = parse_azlyrics(artist_name, track_title)
         # parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
         resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)

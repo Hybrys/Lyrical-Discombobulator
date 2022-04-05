@@ -4,6 +4,7 @@ Postgresql database interaction handler for the scraper and frontend systems, as
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from os import environ
 
 NOT_FOUND = 0
 NAME_COLLIDED = 1
@@ -12,7 +13,6 @@ SUCCESS_NO_RESPONSE = 3
 MANY_FOUND = 4
 NO_CONTENT = 5
 
-
 class DbFunctions():
     def __init__(self, db="database"):
         """
@@ -20,8 +20,12 @@ class DbFunctions():
 
         :param filename: Optional param for using a test database
         """
-        # self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{db}")
-        self.database = create_engine(f"postgresql+pg8000://postgres:@localhost:5454/{db}")
+        # Find out if I'm containerized
+        container_check = environ.get('CONTAINER_DB')
+        if container_check:
+            self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{db}")
+        else:
+            self.database = create_engine(f"postgresql+pg8000://postgres:@localhost:5454/{db}")
         self.db = Session(self.database)
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name))")
@@ -56,11 +60,13 @@ class DbFunctions():
                  NO_ITEM_TO_ADD if the list of albums is empty
         """
 
-        if albums != None:
-            artist_id = self.db.execute("SELECT artist_id FROM artists WHERE name = :name", {"name": artist[0]}).fetchone()[0]
+        if albums != None and albums != []:
+            artist_id = self.db.execute("SELECT artist_id FROM artists WHERE name = :name", {"name": artist}).fetchone()
+            if artist_id == None:
+                return NOT_FOUND
             for album in albums:
-                self.db.execute("INSERT OR IGNORE INTO albums (album_title, artist_id, isparsed) VALUES (:album, :artist_id, :isparsed)", {"album": album, "artist_id": artist_id, "isparsed": False})
-            self.db.execute("UPDATE artists SET isparsed = :isparsed WHERE name = :name", {"isparsed": True, "name": artist[0]})
+                self.db.execute("INSERT INTO albums (album_title, artist_id, isparsed) VALUES (:album, :artist_id, :isparsed) ON CONFLICT DO NOTHING", {"album": album, "artist_id": artist_id[0], "isparsed": False})
+            self.db.execute("UPDATE artists SET isparsed = :isparsed WHERE name = :name", {"isparsed": True, "name": artist})
             self.db.commit()
             return SUCCESS_NO_RESPONSE
         else:
@@ -77,12 +83,12 @@ class DbFunctions():
                  NOT_FOUND if it cannot find a match between artist and album, or
                  NO_ITEM_TO_ADD if the list of tracks is empty
         """
-        if tracks != [] and tracks != None:
+        if tracks != None and tracks != []:
             album_id = self.album_artist_match(artist, album)
             if album_id == NOT_FOUND:
                 return NOT_FOUND
             for index, track in enumerate(tracks):
-                self.db.execute("INSERT OR IGNORE INTO tracks (track_title, track_num, album_id) VALUES :track_title, :track_num, :album_id", {"track_title": track, "track_num": index+1, "album_id": album_id})
+                self.db.execute("INSERT INTO tracks (track_title, track_num, album_id) VALUES (:track_title, :track_num, :album_id) ON CONFLICT DO NOTHING", {"track_title": track, "track_num": index+1, "album_id": album_id})
             self.db.execute("UPDATE albums SET isparsed = :isparsed WHERE album_id = :album_id", {"isparsed": True, "album_id": album_id})
             self.db.commit()
             return SUCCESS_NO_RESPONSE
@@ -105,7 +111,7 @@ class DbFunctions():
         if album_id == NOT_FOUND:
             return NOT_FOUND
 
-        if lyrics != "" and lyrics != None:
+        if lyrics != None and lyrics != "":
             if track_check != None:
                 self.db.execute("UPDATE tracks SET lyrics = :lyrics, parse_tried = :parse_tried WHERE track_title = :track_title AND album_id = :album_id", {"lyrics": lyrics, "parse_tried": True, "track_title": track, "album_id": album_id})
                 self.db.commit()
@@ -169,7 +175,7 @@ class DbFunctions():
         :return: A list of lists where each list contains the artist name, album title, and track title
         """
         result = []
-        unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS :lyrics AND parse_tried IS :parse_tried", {"lyrics": None, "parse_tried": False}).fetchall()
+        unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS NULL AND parse_tried IS NULL").fetchall()
         for track in unparsed_tracks:
             album_info = self.db.execute("SELECT album_title, artist_id FROM albums WHERE album_id = :album_id", {"album_id": track[1]}).fetchone()
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = :artist_id", {"artist_id": album_info[1]}).fetchone()
@@ -184,11 +190,11 @@ class DbFunctions():
         :return: A list of lists for each artist that have a False for the isparsed flag, with each list containing the artist name, album title, track title, and the album_id
         """
         result = []
-        unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS :lyrics AND parse_tried = :parse_tired", {"lyrics": False, "parse_tried": True}).fetchall()
+        unparsed_tracks = self.db.execute("SELECT track_title, album_id FROM tracks WHERE lyrics IS NULL AND parse_tried = :parse_tried", {"parse_tried": True}).fetchall()
         for track in unparsed_tracks:
             album_info = self.db.execute("SELECT album_title, artist_id FROM albums WHERE album_id = :album_id", {"album_id": track[1]}).fetchone()
             artist_name = self.db.execute("SELECT name FROM artists WHERE artist_id = :artist_id", {"artist_id": album_info[1]}).fetchone()
-            result.append([artist_name[0], album_info[0], track[0], track[1]])
+            result.append([artist_name[0], album_info[0], track[0]])
         return result
 
     def view_artist_albums(self, artist):
@@ -243,15 +249,14 @@ class DbFunctions():
             return NOT_FOUND
         tracks = self.db.execute("SELECT track_title FROM tracks WHERE album_id = :album_id", {"album_id": album_id[0]}).fetchall()
         if tracks == []:
-            print("No content bro")
             return NO_CONTENT
         for track in tracks:
-            result.append([album_id[1], album_id[2], track])
+            result.append([album_id[1], album_id[2], track[0]])
         return result
 
     def view_album_tracks_fuzzy(self, album):
         """
-        View all albums with a name similar to the search argument with a LIKE query assessing near-matches
+        View all albums with a name similar to the search argument with an ILIKE query assessing near-matches
 
         :param artist: Album name as a string
         :return: A list of lists  with album id, artist name, and album title the tracks from that album
@@ -302,26 +307,6 @@ class DbFunctions():
             return SUCCESS_NO_RESPONSE, [query]
         else:
             return NOT_FOUND, None
-
-    def view_track_lyrics_fuzzy(self, album):
-        """
-        CURRENTLY UNIMPLEMENTED
-
-        View all of an albums tracks
-
-        :param artist: Album name as a string
-        :return: Returns a list of the tracks from that album
-                 NOT_FOUND if there are none.
-        """
-        result = []
-        artist_id = self.db.execute("SELECT album_id, name, album_title FROM albums JOIN artists ON albums.artist_id = artists.artist_id WHERE album_title ILIKE :album_title", {"album_title": "%"+album+"%"}).fetchall()
-
-        if artist_id != []:
-            for artist in artist_id:
-                result.append([artist_id[0]])
-        else:
-            return NOT_FOUND
-        return result
 
     def lyric_lookup(self, searchparam):
         """
