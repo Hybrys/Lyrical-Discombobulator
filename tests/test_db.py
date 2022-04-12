@@ -12,7 +12,8 @@ from sqlalchemy import create_engine
 class DBTesting(unittest.TestCase):
     def setUp(self):
         setup_test_db()
-        self.db = DbFunctions(db="test")
+        os.environ["DATABASE"] = "test"
+        self.db = DbFunctions()
     
     def tearDown(self):
         self.db.close()

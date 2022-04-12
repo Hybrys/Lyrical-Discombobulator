@@ -17,5 +17,4 @@ COPY ./db/*.py ./db/
 COPY ./tests/*.py ./tests/
 COPY ./server/*.py ./server/
 
-# CMD ["ls", "-la"]
 CMD ["python3", "./server/main.py"]

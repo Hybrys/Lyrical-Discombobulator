@@ -14,12 +14,15 @@ MANY_FOUND = 4
 NO_CONTENT = 5
 
 class DbFunctions():
-    def __init__(self, db="database"):
+    def __init__(self):
         """
         Initialize the database for use - create the tables and file if it doesn't exist.
 
         :param filename: Optional param for using a test database
         """
+        # Check env variables for db
+        db = environ.get('DATABASE')
+
         # Find out if I'm containerized
         container_check = environ.get('CONTAINER_DB')
         if container_check:
