@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 
 class FlaskTestingEmptyDB(unittest.TestCase):
     def setUp(self):
-        main.db_closer()
+        main.database.close()
         db_init()
         reload(main)
     
@@ -49,7 +49,7 @@ class FlaskTestingEmptyDB(unittest.TestCase):
 
 class FlaskTestingSeededDB(unittest.TestCase):
     def setUp(self):
-        main.db_closer()
+        main.database.close()
         db_init()
         seed_database()
         reload(main)

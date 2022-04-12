@@ -196,8 +196,5 @@ def convert_link_strings(artist_name, album_title, track_title):
     result.append(f"<td><a href=# onclick='$(\"#div1\").load(\"track/{track_uri}/{artist_uri}/{album_uri}\")'>{track_title}</a></td></tr>")
     return result
 
-def db_closer():
-    database.close()
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=4000, debug=True)
