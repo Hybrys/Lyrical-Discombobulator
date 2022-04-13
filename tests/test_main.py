@@ -12,7 +12,8 @@ from sqlalchemy import create_engine
 
 
 class FlaskTestingEmptyDB(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         main.database.close()
         db_init()
         reload(main)
@@ -48,7 +49,8 @@ class FlaskTestingEmptyDB(unittest.TestCase):
         self.assertIn(b"I couldn't find any", res.data)
 
 class FlaskTestingSeededDB(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         main.database.close()
         db_init()
         seed_database()
