@@ -7,12 +7,17 @@ sys.path.append(os.getcwd())
 import unittest
 from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
 from sqlalchemy import create_engine
+import main
 
 
 class DBTesting(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        main.database.close()
+        os.environ["DATABASE"] = "test"
+        
     def setUp(self):
         setup_test_db()
-        os.environ["DATABASE"] = "test"
         self.db = DbFunctions()
     
     def tearDown(self):

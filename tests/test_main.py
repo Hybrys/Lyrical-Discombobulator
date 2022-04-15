@@ -17,6 +17,10 @@ class FlaskTestingEmptyDB(unittest.TestCase):
         main.database.close()
         db_init()
         reload(main)
+
+    @classmethod
+    def tearDownClass(cls):
+        main.database.close()
     
     def test_index(self):
         with main.app.test_client() as test_client:
@@ -55,6 +59,10 @@ class FlaskTestingSeededDB(unittest.TestCase):
         db_init()
         seed_database()
         reload(main)
+
+    @classmethod
+    def tearDownClass(cls):
+        main.database.close()
     
     def test_index(self):
         with main.app.test_client() as test_client:
