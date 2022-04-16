@@ -9,7 +9,6 @@ Debug currently True
 import os
 import sys
 sys.path.append(os.getcwd())
-os.environ["DATABASE"] = "test"
 
 from flask import Flask, Response
 from urllib.parse import unquote, quote
@@ -213,6 +212,7 @@ def convert_link_strings(artist_name, album_title, track_title):
     return result
 
 if __name__ == "__main__":
+    os.environ["DATABASE"] = "test"
     import adminapi
     adminapi.dbinit()
     app.register_blueprint(adminapi.bp)
