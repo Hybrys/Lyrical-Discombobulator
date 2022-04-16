@@ -9,13 +9,13 @@ Debug currently True
 import os
 import sys
 sys.path.append(os.getcwd())
+os.environ["DATABASE"] = "test"
 
 from flask import Flask, Response
 from urllib.parse import unquote, quote
 from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
 
 app = Flask(__name__)
-database = DbFunctions()
 
 @app.get("/")
 def index():
@@ -42,6 +42,7 @@ def view_artist(artist):
     :param artist: Accepts the information in the <string:artist> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
+    database = DbFunctions()
     response = ["<table><tr><th>Artist</th><th>Album</th></tr>"]
     artist = unquote(artist)
     check = database.view_artist_albums(artist)
@@ -51,6 +52,7 @@ def view_artist(artist):
             response.append(f"<tr><td>{artist_name}</td>")
             response.append(album_link + "</tr>")
         response = "".join(response) + "</table>"
+        database.close()
         return Response(response)
 
     else:
@@ -60,11 +62,13 @@ def view_artist(artist):
             artist = artist[int(searchlen/2)::]
         check = database.view_artist_albums_fuzzy(artist)
         if check == NOT_FOUND:
-            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?", status=400)
+            database.close()
+            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?")
         for fetched_item in check:
             artist = quote(fetched_item[0])
             response.append(f"<br/><a href=# onclick='$(\"#div1\").load(\"artist/{artist}\")'>{fetched_item[0]}</a>")
         response = "".join(response)
+        database.close()
         return Response(response)
 
 
@@ -78,6 +82,7 @@ def view_album(album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
+    database = DbFunctions()
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
@@ -88,6 +93,7 @@ def view_album(album):
             response.append(f"<td>{album_title}</td>")
             response.append(track_link)
         response = "".join(response) + "</table>"
+        database.close()
         return Response(response)
 
     elif check == NOT_FOUND:
@@ -97,15 +103,17 @@ def view_album(album):
             album = album[int(searchlen/2)::]
         check = database.view_album_tracks_fuzzy(album)
         if check == NOT_FOUND:
-            return Response("This album isn't in the database yet!", status=400)
+            return Response("This album isn't in the database yet!")
         for res_album in check:
             album_uri = quote(res_album[2])
             response.append(f"<br /><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{res_album[2]}</a>")
         response = "".join(response)
+        database.close()
         return Response(response)
 
     else:
-        return Response(f"The album {album} has no tracks in it yet!  Sorry!", status=400)
+        database.close()
+        return Response(f"The album {album} has no tracks in it yet!  Sorry!")
 
 
 @app.get("/track/<string:track>/<string:artist>/<string:album>")
@@ -123,6 +131,7 @@ def view_track(track, artist, album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
+    database = DbFunctions()
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)
@@ -141,7 +150,9 @@ def view_track(track, artist, album):
             response.append(f"<td>{track_title}</td></tr></table><br/><br/>{lyrics}")
         response = "".join(response)
         if empty_track == True:
-            return Response(response, status=400)
+            database.close()
+            return Response(response)
+        database.close()
         return Response(response)
 
     elif check == MANY_FOUND:
@@ -149,10 +160,12 @@ def view_track(track, artist, album):
         for track_title, artist_name, album_title in result:
             response.extend(convert_link_strings(artist_name, album_title, track_title))
         response = "".join(response) + "</table>"
+        database.close()
         return Response(response)
 
     else:
-        return Response("This track isn't in the database yet!  Sorry!", status=400)
+        database.close()
+        return Response("This track isn't in the database yet!  Sorry!")
 
 
 @app.get("/lyrics/<string:searchparam>")
@@ -166,15 +179,18 @@ def lyric_lookup(searchparam):
     :param searchparam: Accepts the information in the <string:searchparam> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
+    database = DbFunctions()
     searchparam = unquote(searchparam)
     response = [f"These are the tracks that have the word or phrase '{searchparam}' in its lyrics:<br />", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
 
     check = database.lyric_lookup(searchparam)
     if check == NOT_FOUND:
-        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!", status=400)
+        database.close()
+        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!")
     for artist_name, album_title, track_title in check:
         response.extend(convert_link_strings(artist_name, album_title, track_title))
     response = "".join(response) + "</table>"
+    database.close()
     return Response(response)
 
 
@@ -197,4 +213,7 @@ def convert_link_strings(artist_name, album_title, track_title):
     return result
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=4000, debug=True)
+    import adminapi
+    adminapi.dbinit()
+    app.register_blueprint(adminapi.bp)
+    app.run(host="0.0.0.0", port=4000)
