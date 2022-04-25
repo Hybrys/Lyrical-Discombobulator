@@ -41,6 +41,7 @@ def add_artists(artists: list = []):
     """
     
     if artists == []:
+        logger.info("I didn't find one or more required arguments.  Going into routine mode.")
         artistjson = open("./scraper/master_artist_list.json")
         artistdata = json.load(artistjson)
         artists = artistdata["artists"]
@@ -61,17 +62,21 @@ def get_albums(artists: list = []):
     """
 
     if artists == []:
+        logger.info("I didn't find one or more required arguments.  Going into routine mode.")
         artists = dbcur.view_unparsed_artists()
 
-    for artist in artists:
-        parsed_albums = parse_artist_albums(artist)
-        resp = dbcur.add_artist_albums(artist, parsed_albums)
-    if resp == NOT_FOUND:
-        logger.critical(f"The artist {artist} was not found while trying to add albums to the database!")
-    elif resp == NO_ITEM_TO_ADD:
-        logger.critical(f"The album list was empty for {artist}")
+    if artists != []:
+        for artist in artists:
+            parsed_albums = parse_artist_albums(artist)
+            resp = dbcur.add_artist_albums(artist, parsed_albums)
+        if resp == NOT_FOUND:
+            logger.critical(f"The artist {artist} was not found while trying to add albums to the database!")
+        elif resp == NO_ITEM_TO_ADD:
+            logger.critical(f"The album list was empty for {artist}")
+        else:
+            logger.info(f"Successfully added albums for {artist}")
     else:
-        logger.info(f"Successfully added albums for {artist}")
+        logger.info(f"No artists to parse!")
 
 def parse_artist_albums(artist):
     """
@@ -141,14 +146,12 @@ def find_artist_page(artist):
         response = requests.get(f"https://en.wikipedia.org/wiki/{artist}_(band)")
         soup = BeautifulSoup(response.text, 'html.parser')
         finder = find_album_list_in_page(soup)
-        return finder
 
     if finder == None:
         logger.debug(f"Track listing wasn't found!  Trying just {artist}")
         response = requests.get(f"https://en.wikipedia.org/wiki/{artist}")
         soup = BeautifulSoup(response.text, 'html.parser')
         finder = find_album_list_in_page(soup)
-        return finder
 
     if response.status_code != 200:
         logger.critical(f"I'm {response.status_code}ing please send help")
@@ -198,27 +201,29 @@ def get_tracks(artist_name: str = "", album_title: str = ""):
     :param album_title: A string of the album name that should be retrieved.  If defaulted to None, it will check the database for albums that have not yet been parsed via an 'isparsed' flag, and use element unpacking to assign album_title to the second element of the response list.
     """
 
-    # This logic should correctly refuse any instance where not all of the variables are defined
+    # This logic should correctly refuse any instance where even one of the variables is left undefined
+    # If this happens, it goes into routine mode where it looks up currently unparsed albums
     if artist_name == "" or album_title == "":
+        logger.info("I didn't find one or more required arguments.  Going into routine mode.")
         for artist_name, album_title in dbcur.view_unparsed_albums():
-            parsed_albums = parse_album_tracks(artist_name, album_title)
-            resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
+            parsed_track_list = parse_album_tracks(artist_name, album_title)
+            resp = dbcur.add_album_tracks(artist_name, album_title, parsed_track_list)
             if resp == NOT_FOUND:
-                logger.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
+                logger.critical(f"The album {album_title} from artist {artist_name} was not found while trying to add tracks to the database!")
             elif resp == NO_ITEM_TO_ADD:
                 logger.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
             else:
-                logger.info(f"Successfully added {album_title} had its tracks added to the db.")
+                logger.info(f"{album_title} successfully had its tracks added to the db.")
 
     else:
-        parsed_albums = parse_album_tracks(artist_name, album_title)
-        resp = dbcur.add_album_tracks(artist_name, album_title, parsed_albums)
+        parsed_track_list = parse_album_tracks(artist_name, album_title)
+        resp = dbcur.add_album_tracks(artist_name, album_title, parsed_track_list)
         if resp == NOT_FOUND:
-            logger.critical(f"The album {album_title} from artist {artist_name} were not found while trying to add tracks to the database!")
+            logger.critical(f"The album {album_title} from artist {artist_name} was not found while trying to add tracks to the database!")
         elif resp == NO_ITEM_TO_ADD:
             logger.error(f"The album {album_title} from artist {artist_name} has an empty list for its tracks.  Check Falsed 'isparsed' items in the database")
         else:
-            logger.info(f"Successfully added {album_title} had its tracks added to the db.")
+            logger.info(f"{album_title} successfully had its tracks added to the db.")
 
 
 def parse_album_tracks(artist, album):
@@ -254,16 +259,19 @@ def parse_album_tracks(artist, album):
                 for element in tabler.tbody("tr"):
                     if element.td != None and element.td.find_previous_sibling("th") != None:
                         tracks.append(element.td.find_previous_sibling("th").i.text)
+        if tracks == []:
+            logger.info(f"I found a table, but I didn't get the tracks for {album} from it.")
+            raise ValueError    # Raised error to advance the state if the track system is still empty and hasn't errored out yet
         logger.info(f"Successfully returning tracks for {album} from a table!")
         return tracks
-    except AttributeError:
-        pass
+    except (AttributeError, ValueError):
+        pass    # Resolving expected errors to get them into the next Try block
 
     try:
         lister = finder.parent.find_next_sibling("ol")
-        logger.info(f"I didn't find a table for {album}, but I found an ordered list!")
+        logger.info(f"I didn't find a table for {album} or didn't get a track list from it, but I found an ordered list!")
         for element in lister("li"):
-            hyphen = element.text.find("–")
+            hyphen = element.text.find("–") # This is intentionally an odd hyphen (character U+2013) 
             tracks.append((element.text[:hyphen-1].replace('"', '')))
         logger.info(f"Successfully returning tracks for {album} from a list!")
         return tracks
@@ -347,11 +355,13 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
     :param album_title: A string of the album name that should be retrieved.  If defaulted to None, it will check the database for tracks that have not had a parse attempted (via the 'parse_tried' flag), and use element unpacking to assign album_title to the second element of the response list.
     :param track_title: A string or list of track titles that should have their lyrics retrieved.  If defaulted to None, it will check the database for tracks that have not had a parse attempted (via the 'parse_tried' flag), and use element unpacking to assign album_title to the third element of the response list.
     """
-
+    
     multiplexing = 0
 
-    # This logic should correctly refuse any instance where not all of the variables are defined
+    # This logic should correctly capture any instance where not all of the variables are defined
+    # If this happens, it goes into routine mode where it looks up currently unparsed tracks
     if artist_name == "" or album_title == "" or track_title == "":
+        logger.info("I didn't find one or more required arguments.  Going into routine mode.")
         for artist_name, album_title, track_title in dbcur.view_unparsed_tracks():
             multiplexing += 1
             if multiplexing % 2 == 0:
@@ -364,7 +374,7 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
             elif resp == NO_ITEM_TO_ADD:
                 logger.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
             else:
-                logger.info(f"Successfully added {track_title}'s lyrics added to the db.")
+                logger.info(f"Successfully added {track_title}'s lyrics to the db.")
             time.sleep(5)
     else:
         # Handling for track_title being a list of tracks from the same album/artist combination
@@ -378,35 +388,25 @@ def get_lyrics(artist_name: str = "", album_title: str = "", track_title: str | 
             elif resp == NO_ITEM_TO_ADD:
                 logger.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
             else:
-                logger.info(f"Successfully added {track_title}'s lyrics added to the db.")
+                logger.info(f"Successfully added {track_title}'s lyrics to the db.")
         else:
             for track in track_title:
                 multiplexing += 1
                 if multiplexing % 2 == 0:
-                    parsed_tracks = parse_azlyrics(artist_name, track_title)
+                    parsed_tracks = parse_azlyrics(artist_name, track)
                 else:
-                    parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
-                resp = dbcur.add_track_lyrics(artist_name, album_title, track_title, parsed_tracks)
+                    parsed_tracks = parse_songlyricsdotcom(artist_name, track)
+                resp = dbcur.add_track_lyrics(artist_name, album_title, track, parsed_tracks)
                 if resp == NOT_FOUND:
-                    logger.critical(f"Either the track {track_title} or the album {album_title} from artist {artist_name} was not found!")
+                    logger.critical(f"Either the track {track} or the album {album_title} from artist {artist_name} was not found!")
                 elif resp == NO_ITEM_TO_ADD:
-                    logger.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
+                    logger.error(f"The track {track} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
                 else:
-                    logger.info(f"Successfully added {track_title}'s lyrics added to the db.")
+                    logger.info(f"Successfully added {track}'s lyrics to the db.")
                 time.sleep(5)
 
-def parse_azlyrics(artist, track):
-    """
-    Parses the chosen track by one specific artist, using AZLyrics, looking for the lyrics in a specific div
-
-    :param track: Title of the track as a string
-    :param artist: Name of the artist that the album belongs to as a string
-    :return: Returns the tracks on an album as a list
-    """
-
+def azlyrics_format_strings(artist, track):
     regex_spec_characters = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
-    if "instrumental" in track:
-        return ""
 
     no_space_artist = re.sub(regex_spec_characters, "", artist.lower())
     no_space_track = re.sub(regex_spec_characters, "", track.lower().replace("&", "and"))
@@ -420,11 +420,30 @@ def parse_azlyrics(artist, track):
     if featuring_filter != -1:
         no_space_track = no_space_track[0:featuring_filter]
 
+    return no_space_artist, no_space_track
+
+def parse_azlyrics(artist, track):
+    """
+    Parses the chosen track by one specific artist, using AZLyrics, looking for the lyrics in a specific div
+
+    :param track: Title of the track as a string
+    :param artist: Name of the artist that the album belongs to as a string
+    :return: Returns the tracks on an album as a list
+    """
+    regex_spec_characters = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
+
+    if "instrumental" in track.lower():
+        logger.debug(f"I think this track {track} from {artist} is an instrumental, so I'm just returning nothing now")
+        return ""
+    
+    no_space_artist, no_space_track = azlyrics_format_strings(artist, track)
+
     response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
 
     if response.status_code == 404:
         if "(" in track:
             parenindex = track.find("(")
+            logger.info(f"Removing parens from {track} to see if I can get a better match")
             no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].lower())
             response = requests.get(f"https://www.azlyrics.com/lyrics/{no_space_artist}/{no_space_track}.html")
 
@@ -441,11 +460,12 @@ def parse_azlyrics(artist, track):
             div_string = str(soup.find_next_sibling("div"))
             comment_tag = div_string.find("-->")
             lyrics = div_string[comment_tag+3:].replace("</div>", "").replace("<br/>", "").replace("\r", "")
+            logger.info(f"Successfully returning lyrics from lyricsh div for {track} by {artist}")
             return lyrics[1:-1]
+
         except AttributeError:
             logger.critical(f"Failed finding the lyricsh div for {track} by {artist}!")
             return ""
-
 
 def parse_songlyricsdotcom(artist, track):
     """
@@ -455,10 +475,54 @@ def parse_songlyricsdotcom(artist, track):
     :param artist: Name of the artist that the album belongs to as a string
     :return: Returns the tracks on an album as a list
     """
-
     regex_spec_characters = r"[ ,.!@#$%^&*()_+=/\\'\":;?\[\]]"
-    if "instrumental" in track:
+
+    if "instrumental" in track.lower():
+        logger.debug(f"I think this track {track} from {artist} is an instrumental, so I'm just returning nothing now")
         return ""
+
+    no_space_artist, no_space_track = songlyricsdotcom_format_strings(artist, track)
+    
+    try:
+        response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
+        
+        if response.status_code == 404:
+            if "(" in track:
+                logger.info(f"Removing parens from {track} to see if I can get a better match")
+                parenindex = track.find("(")
+                no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].replace(" ", "-").lower())
+                no_space_track = no_space_track.replace("--", "-")
+                if no_space_track != "":
+                    if no_space_track[-1] == "-":
+                        no_space_track = no_space_track[:-1]
+                response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
+
+    except requests.exceptions.TooManyRedirects:    # Handles an edge case where the scraper was stuck in a redirect loop
+        logger.debug(f"Requests got stuck in a redirect loop with songlyrics.com while parsing {track} from {artist}")
+        return ""
+
+    if response.status_code != 200:
+        logger.critical(f"I'm {response.status_code}ing please send help")
+        logger.critical(f"The artist is: {artist}\nThe track is: {track}")
+        return ""
+    else:
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        try:
+            lyrics = str(soup.find(id="songLyricsDiv").text)
+            lyrics = lyrics.replace("(instrumental)", "").replace("[instrumental]", "").replace("[Instrumental]", "").replace("(Instrumental)", "")
+            if "do not have the lyrics for" in lyrics:
+                logger.critical(f"Songlyrics doesn't have the lyrics for {track} by {artist}!")
+                return ""
+            else:
+                logger.info(f"Successfully returning lyrics from songLyricsDiv div for {track} by {artist}")
+                return str(soup.find(id="songLyricsDiv").text)
+        except AttributeError:
+            logger.critical(f"Failed finding the songLyricsDiv div for {track} by {artist}!")
+            return ""
+
+def songlyricsdotcom_format_strings(artist, track):
+    regex_spec_characters = r"[ ,.!@#$%^&*()_+=/\\'\":;?\[\]]"
 
     no_space_artist = re.sub(regex_spec_characters, "", artist.replace(" ", "-").lower())
     no_space_track = re.sub(regex_spec_characters, "", track.replace(" ", "-").lower())
@@ -468,11 +532,11 @@ def parse_songlyricsdotcom(artist, track):
     elif artist[0:4].lower() == "the ":
         no_space_artist = re.sub(regex_spec_characters, "", artist[3:].replace(" ", "-").lower())
 
+    # special case handling
     featuring_filter = no_space_track.find("feat")
     if featuring_filter != -1:
         no_space_track = no_space_track[0:featuring_filter]
 
-    # special case handling
     if no_space_artist == "mute-math":
         no_space_artist = "mutemath"
 
@@ -489,37 +553,7 @@ def parse_songlyricsdotcom(artist, track):
     if "--" in no_space_track:
         no_space_track = no_space_track.replace("--", "-")
 
-    try:
-        response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
-        if response.status_code == 404:
-            if "(" in track:
-                parenindex = track.find("(")
-                no_space_track = re.sub(regex_spec_characters, "", track[:parenindex].replace(" ", "-").lower())
-                no_space_track = no_space_track.replace("--", "-")
-                if no_space_track != "":
-                    if no_space_track[-1] == "-":
-                        no_space_track = no_space_track[:-1]
-                response = requests.get(f"https://www.songlyrics.com/{no_space_artist}/{no_space_track}-lyrics/")
-    except requests.exceptions.TooManyRedirects:
-        return ""   # Handles an edge case where the scraper was stuck in a referrer loop
-
-    if response.status_code != 200:
-        logger.critical(f"I'm {response.status_code}ing please send help")
-        logger.critical(f"The artist is: {artist}\nThe track is: {track}")
-        return ""
-    else:
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        try:
-            lyrics = str(soup.find(id="songLyricsDiv").text)
-            lyrics = lyrics.replace("(instrumental)", "").replace("[instrumental]", "").replace("[Instrumental]", "").replace("(Instrumental)", "")
-            if "do not have the lyrics for" in lyrics:
-                return ""
-            else:
-                return str(soup.find(id="songLyricsDiv").text)
-        except AttributeError:
-            logger.critical(f"Failed finding the lyricsh div for {track} by {artist}!")
-            return ""
+    return no_space_artist, no_space_track
 
 def second_pass_lyrics():
     """
@@ -535,7 +569,7 @@ def second_pass_lyrics():
         Parser control mechanism is on the lines below
 
         AZLyrics provides better quality data
-        Lyrics.com features no bot protection
+        Songlyrics.com features no bot protection
         """
         parsed_tracks = parse_azlyrics(artist_name, track_title)
         # parsed_tracks = parse_songlyricsdotcom(artist_name, track_title)
@@ -545,7 +579,7 @@ def second_pass_lyrics():
         elif resp == NO_ITEM_TO_ADD:
             logger.error(f"The track {track_title} on album {album_title} from artist {artist_name} has an empty string for its lyrics!  Check nulled 'lyrics' items in the database")
         else:
-            logger.info(f"Successfully added {track_title}'s lyrics added to the db.")
+            logger.info(f"Successfully added {track_title}'s lyrics to the db.")
         time.sleep(10)
 
 
@@ -558,14 +592,14 @@ I'm currently focusing on manipulating the current dataset.
 """
 
 logger = logging.getLogger('scraper_logger')
-logging.basicConfig(level=logging.WARNING)
+logger.setLevel(level=logging.WARNING)
 dbcur = DbFunctions()
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)    # Allow manual runs to get more verbose information
+    logger.setLevel(level=logging.DEBUG)    # Allow manual runs to get more verbose information
     # add_artists()
     # get_albums()
-    # get_tracks()
+    get_tracks()
     # get_lyrics()
     # second_pass_lyrics()
     pass

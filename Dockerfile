@@ -16,5 +16,6 @@ COPY ./index.html ./index.html
 COPY ./scraper/*.py ./scraper/
 COPY ./db/*.py ./db/
 COPY ./tests/*.py ./tests/
+COPY ./tests/mock/*.pickle ./tests/mock/
 
 CMD ["python3", "./main.py"]
