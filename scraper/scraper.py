@@ -599,7 +599,7 @@ if __name__ == "__main__":
     logger.setLevel(level=logging.DEBUG)    # Allow manual runs to get more verbose information
     # add_artists()
     # get_albums()
-    get_tracks()
+    # get_tracks()
     # get_lyrics()
     # second_pass_lyrics()
     pass
