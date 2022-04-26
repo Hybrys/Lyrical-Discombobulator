@@ -5,11 +5,6 @@ Port 4000
 Debug currently True
 """
 
-# Resolve modules not loading
-import os
-import sys
-sys.path.append(os.getcwd())
-
 from flask import Flask, Response
 from urllib.parse import unquote, quote
 from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT

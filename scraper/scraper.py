@@ -20,7 +20,7 @@ TODO:
 7. Consider edge-case handling by headless chrome instance (Playwright)
 """
 
-# Resolve modules not loading
+# Resolve module not loading due to being in side-by-side packages
 import os
 import sys
 sys.path.append(os.getcwd())
