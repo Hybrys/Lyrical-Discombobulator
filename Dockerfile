@@ -12,10 +12,11 @@ RUN pip3 install -r requirements.txt
 RUN pip3 install syllapy --no-deps
 
 COPY *.json .
-COPY ./server/index.html ./server/index.html
+COPY *.py .
+COPY ./index.html ./index.html
 COPY ./scraper/*.py ./scraper/
 COPY ./db/*.py ./db/
 COPY ./tests/*.py ./tests/
-COPY ./server/*.py ./server/
+COPY ./tests/mock/*.pickle ./tests/mock/
 
-CMD ["python3", "./server/main.py"]
+CMD ["python3", "./main.py"]
