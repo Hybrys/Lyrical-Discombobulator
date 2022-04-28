@@ -1,42 +1,58 @@
-import cmudict
 import syllapy
+import nltk
+import nltk.corpus
 import re
 import random
+import pickle
 
 WORD_STORE = {}
 SPEC_CHAR = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
 
-for word in cmudict.dict():
-    count = syllapy.count(word)
-    if count not in WORD_STORE:
-        WORD_STORE[count] = []
-    WORD_STORE[count].append(word)
-
+with open('./nlp/word_store.pickle', 'rb') as file:
+    WORD_STORE = pickle.load(file)
 
 def discombob(lyrics: str):
     result_list = []
+    lyric_result = ""
 
     word_list = lyric_split(lyrics)
     if word_list == False:
         return False
-
+    
     syllable_list = syllable_counter(word_list)
+    word_list = nltk.pos_tag(word_list)
 
     for i, count in enumerate(syllable_list):
-        if count not in WORD_STORE:
-            result_list.append(word_list[i])
+        if count == "NEWLINE":
+            result_list.append("\n")
+            continue
+        if count not in WORD_STORE or word_list[i][-1] == 'PRP':
+            result_list.append(word_list[i][0])
         else:
-            num = random.randrange(0, len(WORD_STORE[count]))
-            result_list.append(WORD_STORE[count][num])
-    
-    return result_list
+            while True:
+                num = random.randrange(0, len(WORD_STORE[count]))
+                if WORD_STORE[count][num][1] == word_list[i][1]:
+                    result_list.append(WORD_STORE[count][num][0])
+                    break
+                else:
+                    continue
 
+    for word in result_list:
+        if word == "\n":
+            lyric_result += word
+        else:
+            lyric_result += f'{word} '
+    
+    return lyric_result
 
 def syllable_counter(word_list: list):
     syllable_list = []
 
     for word in word_list:
         if len(word) < 1:
+            continue
+        if word == "NEWLINE":
+            syllable_list.append(word)
             continue
         if word[0] not in SPEC_CHAR:
             count = syllapy.count(word)
@@ -46,7 +62,8 @@ def syllable_counter(word_list: list):
     return syllable_list
 
 def lyric_split(lyrics: str):
-    word_list = re.split(" |\n|,|-", lyrics)
+    word_list = lyrics.replace("\n", " NEWLINE ")
+    word_list = re.split(" |\n|,|-", word_list)
     word_list = [x for x in word_list if len(x) >= 1]
 
     if len(word_list) < 2:
