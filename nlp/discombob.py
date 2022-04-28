@@ -7,6 +7,7 @@ import pickle
 
 WORD_STORE = {}
 SPEC_CHAR = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
+nltk.download('averaged_perceptron_tagger')
 
 with open('./nlp/word_store.pickle', 'rb') as file:
     WORD_STORE = pickle.load(file)
@@ -16,26 +17,14 @@ def discombob(lyrics: str):
     lyric_result = ""
 
     word_list = lyric_split(lyrics)
-    if word_list == False:
-        return False
+    if len(word_list) < 2:
+        return False    # I need more than one word
     
     syllable_list = syllable_counter(word_list)
     word_list = nltk.pos_tag(word_list)
 
-    for i, count in enumerate(syllable_list):
-        if count == "NEWLINE":
-            result_list.append("\n")
-            continue
-        if count not in WORD_STORE or word_list[i][-1] == 'PRP':
-            result_list.append(word_list[i][0])
-        else:
-            while True:
-                num = random.randrange(0, len(WORD_STORE[count]))
-                if WORD_STORE[count][num][1] == word_list[i][1]:
-                    result_list.append(WORD_STORE[count][num][0])
-                    break
-                else:
-                    continue
+    for i, sylb_count in enumerate(syllable_list):
+        result_list.append(discombob_word(word_list[i], sylb_count))
 
     for word in result_list:
         if word == "\n":
@@ -44,6 +33,17 @@ def discombob(lyrics: str):
             lyric_result += f'{word} '
     
     return lyric_result
+
+def discombob_word(word, sylb_count):
+        if sylb_count == "NEWLINE":
+            return "\n"
+        elif sylb_count not in WORD_STORE or word[1] == 'PRP':
+            return word[0]
+        else:
+            while True:
+                num = random.randrange(0, len(WORD_STORE[sylb_count]))
+                if WORD_STORE[sylb_count][num][1] == word[1]:
+                    return (WORD_STORE[sylb_count][num][0])
 
 def syllable_counter(word_list: list):
     syllable_list = []
@@ -63,10 +63,7 @@ def syllable_counter(word_list: list):
 
 def lyric_split(lyrics: str):
     word_list = lyrics.replace("\n", " NEWLINE ")
-    word_list = re.split(" |\n|,|-", word_list)
+    word_list = re.split(" |,|-", word_list)
     word_list = [x for x in word_list if len(x) >= 1]
-
-    if len(word_list) < 2:
-        return False    # I need more than one word
         
     return word_list

@@ -26,10 +26,6 @@ class SyllableTesting(unittest.TestCase):
         self.assertEqual(result, [1, 1, 1, 1])
 
 class LyricSplitTesting(unittest.TestCase):
-    def test_lyricsplit_oneword(self):
-        result = discombob.lyric_split("Testing")
-        self.assertEqual(result, False)
-
     def test_lyricsplit_phrase(self):
         result = discombob.lyric_split("Test one two three")
         self.assertEqual(result, ["Test", "one", "two", "three"])
@@ -56,12 +52,17 @@ class DiscombobTesting(unittest.TestCase):
         self.assertNotEqual(result, "Testing some lyrics")
         self.assertEqual(len(result.split()), 3)
 
+    def test_discombob_oneword(self):
+        result = discombob.discombob("Testing")
+        self.assertEqual(result, False)
+
     def test_discombob_reallyrics(self):
         with open("./tests/mock/death_cab_lyrics.pickle", "rb") as file:
             test_lyrics = pickle.load(file)
         result = discombob.discombob(test_lyrics)
         self.assertNotEqual(result, test_lyrics)
         self.assertEqual(len(result.split()), 174)
+        print(result)
 
 
 if __name__ == "__main__":
