@@ -7,6 +7,8 @@ import pickle
 
 WORD_STORE = {}
 SPEC_CHAR = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
+
+# Downloads the corpus on first run, checks the version on subsequent calls
 nltk.download('averaged_perceptron_tagger')
 
 with open('./nlp/word_store.pickle', 'rb') as file:
