@@ -56,13 +56,23 @@ class DiscombobTesting(unittest.TestCase):
         result = discombob.discombob("Testing")
         self.assertEqual(result, False)
 
-    def test_discombob_reallyrics(self):
+    def test_discombob_death_cab_lyrics(self):
         with open("./tests/mock/death_cab_lyrics.pickle", "rb") as file:
             test_lyrics = pickle.load(file)
         result = discombob.discombob(test_lyrics)
         self.assertNotEqual(result, test_lyrics)
+        self.assertNotIn("NEWLINE", result)
         self.assertEqual(len(result.split()), 174)
+    
+    def test_discombob_brand_new_lyrics(self):
+        with open("./tests/mock/brand_new_lyrics.pickle", "rb") as file:
+            test_lyrics = pickle.load(file)
+        result = discombob.discombob(test_lyrics)
+        self.assertNotEqual(result, test_lyrics)
+        # self.assertNotIn("NEWLINE", result)
+        # self.assertEqual(len(result.split()), 174)
         print(result)
+        # print(len(result))
 
 
 if __name__ == "__main__":

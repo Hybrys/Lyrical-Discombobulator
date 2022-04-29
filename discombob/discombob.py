@@ -21,8 +21,8 @@ def discombob(lyrics: str):
     result_list = []
     lyric_result = ""
 
-    word_list = lyric_split(lyrics)
-    # If the word-list only contains a single word, this may indicate that it is 
+    word_list = lyric_split(lyrics.lower())
+    # If the word-list only contains a single word, this may indicate that it is instrumental or incomprehensible
     if len(word_list) < 2:
         return False    
     
@@ -41,16 +41,22 @@ def discombob(lyrics: str):
     return lyric_result
 
 def discombob_word(word, sylb_count):
-        if sylb_count == "NEWLINE":
+        failout = 0
+
+        if sylb_count == "NEWLINE" or word[0] == "NEWLINE":
             return "\n"
+
         # Directly return any proper nouns
-        elif sylb_count not in WORD_STORE or word[1] in ['NNP', 'NNPS']:
+        elif sylb_count not in WORD_STORE or word[1] in ['NNP', 'NNPS'] or word[0][-1] in SPEC_CHAR:
             return word[0]
         else:
-            while True:
+            while failout < 25:
                 num = random.randrange(0, len(WORD_STORE[sylb_count]))
                 if WORD_STORE[sylb_count][num][1] == word[1]:
                     return (WORD_STORE[sylb_count][num][0])
+                failout += 1
+            return word[0]
+                
 
 def syllable_counter(word_list: list):
     syllable_list = []
@@ -61,9 +67,9 @@ def syllable_counter(word_list: list):
         if word == "NEWLINE":
             syllable_list.append(word)
             continue
-        if word[0] not in SPEC_CHAR:
+        else:
             count = syllapy.count(word)
-            if count != 0:
+            if count > 0:
                 syllable_list.append(count)
 
     return syllable_list
@@ -72,5 +78,5 @@ def lyric_split(lyrics: str):
     word_list = lyrics.replace("\n", " NEWLINE ")
     word_list = re.split(" |,|-", word_list)
     word_list = [x for x in word_list if len(x) >= 1]
-        
+
     return word_list
