@@ -3,7 +3,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 
-from nlp import discombob
+from discombob import discombob
 import unittest
 import pickle
 import os

@@ -8,10 +8,13 @@ import pickle
 WORD_STORE = {}
 SPEC_CHAR = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
 
-# Downloads the corpus on first run, checks the version on subsequent calls
-nltk.download('averaged_perceptron_tagger')
+# Downloads the tagger required if it cannot be found by NLTK
+try:
+    nltk.data.find('taggers/averaged_perceptron_tagger')
+except LookupError:
+    nltk.download('averaged_perceptron_tagger')
 
-with open('./nlp/word_store.pickle', 'rb') as file:
+with open('./discombob/word_store.pickle', 'rb') as file:
     WORD_STORE = pickle.load(file)
 
 def discombob(lyrics: str):
@@ -19,8 +22,9 @@ def discombob(lyrics: str):
     lyric_result = ""
 
     word_list = lyric_split(lyrics)
+    # If the word-list only contains a single word, this may indicate that it is 
     if len(word_list) < 2:
-        return False    # I need more than one word
+        return False    
     
     syllable_list = syllable_counter(word_list)
     word_list = nltk.pos_tag(word_list)
@@ -39,7 +43,8 @@ def discombob(lyrics: str):
 def discombob_word(word, sylb_count):
         if sylb_count == "NEWLINE":
             return "\n"
-        elif sylb_count not in WORD_STORE or word[1] == 'PRP':
+        # Directly return any proper nouns
+        elif sylb_count not in WORD_STORE or word[1] in ['NNP', 'NNPS']:
             return word[0]
         else:
             while True:
