@@ -8,6 +8,7 @@ Debug currently True
 from flask import Flask, Response
 from urllib.parse import unquote, quote
 from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
+from discombob import discombob
 
 app = Flask(__name__)
 database = DbFunctions()
@@ -42,7 +43,7 @@ def view_artist(artist):
     check = database.view_artist_albums(artist)
     if check != NOT_FOUND:
         for artist_name, album_title in check:
-            artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, "!")
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, "!")
             response.append(f"<tr><td>{artist_name}</td>")
             response.append(album_link + "</tr>")
         response = "".join(response) + "</table>"
@@ -78,7 +79,7 @@ def view_album(album):
     check = database.view_album_tracks(album)
     if check != NOT_FOUND and check != NO_CONTENT:
         for artist_name, album_title, track_title in check:
-            artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, track_title)
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, track_title)
             response.append(artist_link)
             response.append(f"<td>{album_title}</td>")
             response.append(track_link)
@@ -131,9 +132,10 @@ def view_track(track, artist, album):
             if lyrics == None:
                 lyrics = f"We don't have lyrics for {track_title} yet!  Sorry!"
                 empty_track = True
-            response.extend(convert_link_strings(artist_name, album_title, track_title)[0:2])
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, track_title)
+            response.extend(artist_link + album_link)
             lyrics = lyrics.replace("\n", "<br/>")
-            response.append(f"<td>{track_title}</td></tr></table><br/><br/>{lyrics}")
+            response.append(f"<td>{track_title}</td></tr></table><br/>{discombob_link}<br/><br/>{lyrics}")
         response = "".join(response)
         if empty_track == True:
             return Response(response, status=400)
@@ -142,7 +144,7 @@ def view_track(track, artist, album):
     elif check == MANY_FOUND:
         response = ["I found a couple of songs with the same name.  Please select the correct one below:", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
         for track_title, artist_name, album_title in result:
-            response.extend(convert_link_strings(artist_name, album_title, track_title))
+            response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
         response = "".join(response) + "</table>"
         return Response(response)
 
@@ -153,7 +155,7 @@ def view_track(track, artist, album):
 @app.get("/lyrics/<string:searchparam>")
 def lyric_lookup(searchparam):
     """
-    Serves the /lyrcs/ route, accepting the next part of the URI as an argument
+    Serves the /lyrics/ route, accepting the next part of the URI arguments
 
     The function uses the <string:searchparam> part of the URI for looking up a tracks that have lyrics matching the word or phrase.  If it finds any tracks whos lyrics contain searchparam, it will return a table of the tracks with their artists and albums, with clickable links to each element.
     If no matches are found, it then returns a statement to that affect.
@@ -168,9 +170,52 @@ def lyric_lookup(searchparam):
     if check == NOT_FOUND:
         return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!", status=400)
     for artist_name, album_title, track_title in check:
-        response.extend(convert_link_strings(artist_name, album_title, track_title))
+        response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
     response = "".join(response) + "</table>"
     return Response(response)
+
+@app.get("/discombobulate/<string:track>/<string:artist>/<string:album>")
+def lyric_discombob(track, artist, album):
+    """
+    Serves the /discombobulate/ route, accepting the next parts of the URI as an argument, each between a set of /
+    This route is intended to be accessed from the link above a songs lyrics, and requires all arguments.
+
+    This route will show a randomized (or 'dicombobulated') version of the lyrics rather than the actual lyrics in the database
+
+    :param album: Accepts the information in the <string:track> area of the URI, in order to perform the lookup function
+    :param artist: Accepts the information in the <string:artist> area of the URI, in order to perform the lookup function
+    :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the Response() class from Flask
+    """
+    response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
+    track = unquote(track)
+    artist = unquote(artist)
+    album = unquote(album)
+    trackerror = False
+
+    check, result = database.view_track_lyrics(track, artist, album)
+
+    if check == SUCCESS_NO_RESPONSE:
+        for track_title, lyrics, artist_name, album_title in result:
+            response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
+            if lyrics == None:
+                response.append(f"We don't have lyrics for {track_title} yet!  Sorry!")
+                trackerror = True
+            # Convert the lyrics here
+            else:
+                lyrics = discombob.discombob(lyrics)
+                if lyrics == False:
+                    response.append("</tr></table><br/>Sorry, this track doesn't appear to be able to be discombobulated!")
+                    trackerror = True
+                else:
+                    lyrics = lyrics.replace("\n", "<br/>")
+                    response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
+        response = "".join(response)
+        if trackerror == True:
+            return Response(response, status=400)
+        return Response(response)
+    else:
+        return Response("This track isn't in the database yet!  Sorry!", status=400)
 
 
 def convert_link_strings(artist_name, album_title, track_title):
@@ -189,6 +234,7 @@ def convert_link_strings(artist_name, album_title, track_title):
     result.append(f"<tr><td><a href=# onclick='$(\"#div1\").load(\"artist/{artist_uri}\")'>{artist_name}</a></td>")
     result.append(f"<td><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{album_title}</a></td>")
     result.append(f"<td><a href=# onclick='$(\"#div1\").load(\"track/{track_uri}/{artist_uri}/{album_uri}\")'>{track_title}</a></td></tr>")
+    result.append(f"<a href=# onclick='$(\"#div1\").load(\"discombobulate/{track_uri}/{artist_uri}/{album_uri}\")'>Discombobulate this track!</a>")
     return result
 
 if __name__ == "__main__":

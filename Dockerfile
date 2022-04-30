@@ -9,6 +9,7 @@ ENV CONTAINER_DB=True
 
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
+RUN pip3 install syllapy --no-deps
 
 COPY *.json .
 COPY *.py .
