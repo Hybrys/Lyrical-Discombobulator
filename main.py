@@ -191,35 +191,29 @@ def lyric_discombob(track, artist, album):
     track = unquote(track)
     artist = unquote(artist)
     album = unquote(album)
-    empty_track = False
+    trackerror = False
 
     check, result = database.view_track_lyrics(track, artist, album)
 
     if check == SUCCESS_NO_RESPONSE:
         for track_title, lyrics, artist_name, album_title in result:
-            if lyrics == None:
-                lyrics = f"We don't have lyrics for {track_title} yet!  Sorry!"
-                empty_track = True
             response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
+            if lyrics == None:
+                response.append(f"We don't have lyrics for {track_title} yet!  Sorry!")
+                trackerror = True
             # Convert the lyrics here
-            lyrics = discombob.discombob(lyrics)
-            if lyrics == False:
-                response.append("</tr></table><br/>Sorry, this track doesn't appear to be able to be discombobulated!")
             else:
-                lyrics = lyrics.replace("\n", "<br/>")
-                response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
+                lyrics = discombob.discombob(lyrics)
+                if lyrics == False:
+                    response.append("</tr></table><br/>Sorry, this track doesn't appear to be able to be discombobulated!")
+                    trackerror = True
+                else:
+                    lyrics = lyrics.replace("\n", "<br/>")
+                    response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
         response = "".join(response)
-        if empty_track == True:
+        if trackerror == True:
             return Response(response, status=400)
         return Response(response)
-
-    elif check == MANY_FOUND:
-        response = ["I found a couple of songs with the same name.  Please select the correct one below:", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
-        for track_title, artist_name, album_title in result:
-            response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
-        response = "".join(response) + "</table>"
-        return Response(response)
-
     else:
         return Response("This track isn't in the database yet!  Sorry!", status=400)
 

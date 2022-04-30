@@ -11,7 +11,7 @@ The database is pre-populated with over 1000 artists and 45000 tracks with lyric
  - Track title
  - Word or phrase, searched against the lyrics
 
- This project has 97% test coverage by line, with unit testing.  Integration and E2E testing to come.
+ This project has 98% test coverage by line, with unit testing.  Integration and E2E testing to come.
 
 ## Dependancies
 Requires Docker v18 or higher (docker compose up -d)
