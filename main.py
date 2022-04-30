@@ -56,7 +56,7 @@ def view_artist(artist):
             artist = artist[int(searchlen/2)::]
         check = database.view_artist_albums_fuzzy(artist)
         if check == NOT_FOUND:
-            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?", status=400)
+            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?", status=200)    # Intended to be non-200, but this causes browser render issues
         for fetched_item in check:
             artist = quote(fetched_item[0])
             response.append(f"<br/><a href=# onclick='$(\"#div1\").load(\"artist/{artist}\")'>{fetched_item[0]}</a>")
@@ -93,7 +93,7 @@ def view_album(album):
             album = album[int(searchlen/2)::]
         check = database.view_album_tracks_fuzzy(album)
         if check == NOT_FOUND:
-            return Response("This album isn't in the database yet!", status=400)
+            return Response("This album isn't in the database yet!", status=200)    # Intended to be non-200, but this causes browser render issues
         for res_album in check:
             album_uri = quote(res_album[2])
             response.append(f"<br /><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{res_album[2]}</a>")
@@ -101,7 +101,7 @@ def view_album(album):
         return Response(response)
 
     else:
-        return Response(f"The album {album} has no tracks in it yet!  Sorry!", status=400)
+        return Response(f"The album {album} has no tracks in it yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 @app.get("/track/<string:track>/<string:artist>/<string:album>")
@@ -138,7 +138,7 @@ def view_track(track, artist, album):
             response.append(f"<td>{track_title}</td></tr></table><br/>{discombob_link}<br/><br/>{lyrics}")
         response = "".join(response)
         if empty_track == True:
-            return Response(response, status=400)
+            return Response(response, status=200)    # Intended to be non-200, but this causes browser render issues
         return Response(response)
 
     elif check == MANY_FOUND:
@@ -149,7 +149,7 @@ def view_track(track, artist, album):
         return Response(response)
 
     else:
-        return Response("This track isn't in the database yet!  Sorry!", status=400)
+        return Response("This track isn't in the database yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 @app.get("/lyrics/<string:searchparam>")
@@ -168,7 +168,7 @@ def lyric_lookup(searchparam):
 
     check = database.lyric_lookup(searchparam)
     if check == NOT_FOUND:
-        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!", status=400)
+        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
     for artist_name, album_title, track_title in check:
         response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
     response = "".join(response) + "</table>"
@@ -212,10 +212,10 @@ def lyric_discombob(track, artist, album):
                     response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
         response = "".join(response)
         if trackerror == True:
-            return Response(response, status=400)
+            return Response(response, status=200)    # Intended to be non-200, but this causes browser render issues
         return Response(response)
     else:
-        return Response("This track isn't in the database yet!  Sorry!", status=400)
+        return Response("This track isn't in the database yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 def convert_link_strings(artist_name, album_title, track_title):

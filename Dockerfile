@@ -13,6 +13,7 @@ RUN pip3 install syllapy --no-deps
 
 COPY *.json .
 COPY *.py .
+COPY ./discombob/* ./discombob/
 COPY ./index.html ./index.html
 COPY ./scraper/*.py ./scraper/
 COPY ./db/*.py ./db/
