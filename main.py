@@ -5,16 +5,16 @@ Port 4000
 Debug currently True
 """
 
-# Resolve modules not loading
-import os
-import sys
-sys.path.append(os.getcwd())
-
 from flask import Flask, Response
 from urllib.parse import unquote, quote
 from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
+from discombob import discombob
+import adminapi
+
+database = DbFunctions()
 
 app = Flask(__name__)
+app.register_blueprint(adminapi.bp)
 
 @app.get("/")
 def index():
@@ -41,17 +41,15 @@ def view_artist(artist):
     :param artist: Accepts the information in the <string:artist> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    database = DbFunctions()
     response = ["<table><tr><th>Artist</th><th>Album</th></tr>"]
     artist = unquote(artist)
     check = database.view_artist_albums(artist)
     if check != NOT_FOUND:
         for artist_name, album_title in check:
-            artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, "!")
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, "!")
             response.append(f"<tr><td>{artist_name}</td>")
             response.append(album_link + "</tr>")
         response = "".join(response) + "</table>"
-        database.close()
         return Response(response)
 
     else:
@@ -61,13 +59,11 @@ def view_artist(artist):
             artist = artist[int(searchlen/2)::]
         check = database.view_artist_albums_fuzzy(artist)
         if check == NOT_FOUND:
-            database.close()
-            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?")
+            return Response("This artist isn't in the database yet!  Maybe we'll add it soon?", status=200)    # Intended to be non-200, but this causes browser render issues
         for fetched_item in check:
             artist = quote(fetched_item[0])
             response.append(f"<br/><a href=# onclick='$(\"#div1\").load(\"artist/{artist}\")'>{fetched_item[0]}</a>")
         response = "".join(response)
-        database.close()
         return Response(response)
 
 
@@ -81,18 +77,18 @@ def view_album(album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    database = DbFunctions()
+    
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
     if check != NOT_FOUND and check != NO_CONTENT:
         for artist_name, album_title, track_title in check:
-            artist_link, album_link, track_link = convert_link_strings(artist_name, album_title, track_title)
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, track_title)
             response.append(artist_link)
             response.append(f"<td>{album_title}</td>")
             response.append(track_link)
         response = "".join(response) + "</table>"
-        database.close()
+        
         return Response(response)
 
     elif check == NOT_FOUND:
@@ -102,17 +98,16 @@ def view_album(album):
             album = album[int(searchlen/2)::]
         check = database.view_album_tracks_fuzzy(album)
         if check == NOT_FOUND:
-            return Response("This album isn't in the database yet!")
+            return Response("This album isn't in the database yet!", status=200)    # Intended to be non-200, but this causes browser render issues
         for res_album in check:
             album_uri = quote(res_album[2])
             response.append(f"<br /><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{res_album[2]}</a>")
         response = "".join(response)
-        database.close()
+        
         return Response(response)
 
     else:
-        database.close()
-        return Response(f"The album {album} has no tracks in it yet!  Sorry!")
+        return Response(f"The album {album} has no tracks in it yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 @app.get("/track/<string:track>/<string:artist>/<string:album>")
@@ -130,7 +125,7 @@ def view_track(track, artist, album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    database = DbFunctions()
+    
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)
@@ -144,33 +139,31 @@ def view_track(track, artist, album):
             if lyrics == None:
                 lyrics = f"We don't have lyrics for {track_title} yet!  Sorry!"
                 empty_track = True
-            response.extend(convert_link_strings(artist_name, album_title, track_title)[0:2])
+            artist_link, album_link, track_link, discombob_link = convert_link_strings(artist_name, album_title, track_title)
+            response.extend(artist_link + album_link)
             lyrics = lyrics.replace("\n", "<br/>")
-            response.append(f"<td>{track_title}</td></tr></table><br/><br/>{lyrics}")
+            response.append(f"<td>{track_title}</td></tr></table><br/>{discombob_link}<br/><br/>{lyrics}")
         response = "".join(response)
         if empty_track == True:
-            database.close()
-            return Response(response)
-        database.close()
+            return Response(response, status=200)    # Intended to be non-200, but this causes browser render issues
         return Response(response)
 
     elif check == MANY_FOUND:
         response = ["I found a couple of songs with the same name.  Please select the correct one below:", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
         for track_title, artist_name, album_title in result:
-            response.extend(convert_link_strings(artist_name, album_title, track_title))
+            response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
         response = "".join(response) + "</table>"
-        database.close()
+        
         return Response(response)
 
     else:
-        database.close()
-        return Response("This track isn't in the database yet!  Sorry!")
+        return Response("This track isn't in the database yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 @app.get("/lyrics/<string:searchparam>")
 def lyric_lookup(searchparam):
     """
-    Serves the /lyrcs/ route, accepting the next part of the URI as an argument
+    Serves the /lyrics/ route, accepting the next part of the URI arguments
 
     The function uses the <string:searchparam> part of the URI for looking up a tracks that have lyrics matching the word or phrase.  If it finds any tracks whos lyrics contain searchparam, it will return a table of the tracks with their artists and albums, with clickable links to each element.
     If no matches are found, it then returns a statement to that affect.
@@ -178,19 +171,64 @@ def lyric_lookup(searchparam):
     :param searchparam: Accepts the information in the <string:searchparam> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    database = DbFunctions()
+    
     searchparam = unquote(searchparam)
     response = [f"These are the tracks that have the word or phrase '{searchparam}' in its lyrics:<br />", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
 
     check = database.lyric_lookup(searchparam)
     if check == NOT_FOUND:
-        database.close()
-        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!")
+        return Response("I couldn't find any tracks with that word/phrase in it.  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
     for artist_name, album_title, track_title in check:
-        response.extend(convert_link_strings(artist_name, album_title, track_title))
+        response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
     response = "".join(response) + "</table>"
-    database.close()
+    
     return Response(response)
+
+@app.get("/discombobulate/<string:track>/<string:artist>/<string:album>")
+def lyric_discombob(track, artist, album):
+    """
+    Serves the /discombobulate/ route, accepting the next parts of the URI as an argument, each between a set of /
+    This route is intended to be accessed from the link above a songs lyrics, and requires all arguments.
+
+    This route will show a randomized (or 'dicombobulated') version of the lyrics rather than the actual lyrics in the database
+
+    :param album: Accepts the information in the <string:track> area of the URI, in order to perform the lookup function
+    :param artist: Accepts the information in the <string:artist> area of the URI, in order to perform the lookup function
+    :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the Response() class from Flask
+    """
+    
+
+    response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
+    track = unquote(track)
+    artist = unquote(artist)
+    album = unquote(album)
+    trackerror = False
+
+    check, result = database.view_track_lyrics(track, artist, album)
+
+    if check == SUCCESS_NO_RESPONSE:
+        for track_title, lyrics, artist_name, album_title in result:
+            response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
+            if lyrics == None:
+                response.append(f"We don't have lyrics for {track_title} yet!  Sorry!")
+                trackerror = True
+            # Convert the lyrics here
+            else:
+                lyrics = discombob.discombob(lyrics)
+                if lyrics == False:
+                    response.append("</tr></table><br/>Sorry, this track doesn't appear to be able to be discombobulated!")
+                    trackerror = True
+                else:
+                    lyrics = lyrics.replace("\n", "<br/>")
+                    response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
+        response = "".join(response)
+        if trackerror == True:
+            return Response(response, status=200)    # Intended to be non-200, but this causes browser render issues
+        return Response(response)
+    else:
+        
+        return Response("This track isn't in the database yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 
 def convert_link_strings(artist_name, album_title, track_title):
@@ -209,11 +247,8 @@ def convert_link_strings(artist_name, album_title, track_title):
     result.append(f"<tr><td><a href=# onclick='$(\"#div1\").load(\"artist/{artist_uri}\")'>{artist_name}</a></td>")
     result.append(f"<td><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{album_title}</a></td>")
     result.append(f"<td><a href=# onclick='$(\"#div1\").load(\"track/{track_uri}/{artist_uri}/{album_uri}\")'>{track_title}</a></td></tr>")
+    result.append(f"<a href=# onclick='$(\"#div1\").load(\"discombobulate/{track_uri}/{artist_uri}/{album_uri}\")'>Discombobulate this track!</a>")
     return result
 
 if __name__ == "__main__":
-    os.environ["DATABASE"] = "test"
-    import adminapi
-    adminapi.dbinit()
-    app.register_blueprint(adminapi.bp)
     app.run(host="0.0.0.0", port=4000)

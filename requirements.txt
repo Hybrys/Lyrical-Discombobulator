@@ -5,3 +5,5 @@ flask
 sqlalchemy
 pg8000
 requests
+ujson
+nltk

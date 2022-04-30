@@ -52,6 +52,12 @@ class FlaskTestingEmptyDB(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
         self.assertIn(b"I couldn't find any", res.data)
 
+    def test_lyrics_discombobulator(self):
+        with main.app.test_client() as test_client:
+            res = test_client.get("/discombobulate/Feel%20Like%20Rain/Motion%20City%20Soundtrack/Commit%20This%20to%20Memory")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn(b"This track isn't in the database yet!  Sorry!", res.data)
+
 class FlaskTestingSeededDB(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -143,6 +149,27 @@ class FlaskTestingSeededDB(unittest.TestCase):
         self.assertIn(b'We don\'t have lyrics for Roses yet!', res.data)
         self.assertIn(b'<a href=# onclick=\'$("#div1").load("album/Something%20Real")\'>Something Real</a>', res.data)
 
+    def test_lyrics_discombobulator(self):
+        with main.app.test_client() as test_client:
+            res = test_client.get("/discombobulate/Feel%20Like%20Rain/Motion%20City%20Soundtrack/Commit%20This%20to%20Memory")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'<a href=# onclick=\'$("#div1").load("artist/Motion%20City%20Soundtrack")\'>Motion City Soundtrack</a>', res.data)
+        self.assertIn(b'<a href=# onclick=\'$("#div1").load("album/Commit%20This%20to%20Memory")\'>Commit This to Memory</a>', res.data)
+        self.assertIn(b'<a href=# onclick=\'$("#div1").load("track/Feel%20Like%20Rain/Motion%20City%20Soundtrack/Commit%20This%20to%20Memory")\'>Feel Like Rain</a>', res.data)
+        self.assertNotIn(b"Here's some lyrics with a test in the middle!  Right in the middle there!", res.data)
+
+    def test_lyrics_discombobulator_nolyrics(self):
+        with main.app.test_client() as test_client:
+            res = test_client.get("/discombobulate/Roses/Meg%20%26%20Dia/Something%20Real")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn(b'We don\'t have lyrics for Roses yet!', res.data)
+    
+    def test_lyrics_discombobulator_instrum(self):
+        with main.app.test_client() as test_client:
+            res = test_client.get("/discombobulate/Ready/The%20Starting%20Line/Based%20on%20a%20True%20Story")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn(b"Sorry, this track doesn't appear to be able to be discombobulated!", res.data)
+
 def db_init():
     # Find out if I'm containerized
     container_check = os.environ.get('CONTAINER_DB')
@@ -174,6 +201,10 @@ def seed_database():
     db.add_album_tracks("Motion City Soundtrack", "Commit This to Memory", ["Feel Like Rain"])
     db.add_track_lyrics("Motion City Soundtrack", "Commit This to Memory", "Feel Like Rain", "Here's some lyrics with a test in the middle!  Right in the middle there!")
     db.add_artist_albums("Motion City Soundtrack", ["I Am the Movie"])
+    db.add_artist("The Starting Line")
+    db.add_artist_albums("The Starting Line", ["Based on a True Story"])
+    db.add_album_tracks("The Starting Line", "Based on a True Story", ["Ready"])
+    db.add_track_lyrics("The Starting Line", "Based on a True Story", "Ready", "(Instrumental)")
     db.close()
 
 if __name__ == "__main__":
