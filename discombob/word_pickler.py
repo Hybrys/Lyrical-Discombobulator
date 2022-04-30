@@ -3,10 +3,11 @@ import nltk.corpus
 import syllapy
 import pickle
 
-# This script creates the word store with syllable counts using a hand-filtered version of Google's top 10000 words
-# Word source: https://github.com/first20hours/google-10000-english
+""" This script creates the word store with syllable counts and part-of_speech tagging, 
+    using a hand-filtered version of Google's top 10000 words as the dictionary
+    Word source: https://github.com/first20hours/google-10000-english"""
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # Intended to manuals runs to recreate the dataset only
 
     # Downloads the corpus required if it cannot be found by NLTK
     try:

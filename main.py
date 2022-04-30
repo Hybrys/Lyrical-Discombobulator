@@ -155,7 +155,7 @@ def view_track(track, artist, album):
 @app.get("/lyrics/<string:searchparam>")
 def lyric_lookup(searchparam):
     """
-    Serves the /lyrcs/ route, accepting the next part of the URI as an argument
+    Serves the /lyrics/ route, accepting the next part of the URI arguments
 
     The function uses the <string:searchparam> part of the URI for looking up a tracks that have lyrics matching the word or phrase.  If it finds any tracks whos lyrics contain searchparam, it will return a table of the tracks with their artists and albums, with clickable links to each element.
     If no matches are found, it then returns a statement to that affect.
@@ -176,6 +176,17 @@ def lyric_lookup(searchparam):
 
 @app.get("/discombobulate/<string:track>/<string:artist>/<string:album>")
 def lyric_discombob(track, artist, album):
+    """
+    Serves the /discombobulate/ route, accepting the next parts of the URI as an argument, each between a set of /
+    This route is intended to be accessed from the link above a songs lyrics, and requires all arguments.
+
+    This route will show a randomized (or 'dicombobulated') version of the lyrics rather than the actual lyrics in the database
+
+    :param album: Accepts the information in the <string:track> area of the URI, in order to perform the lookup function
+    :param artist: Accepts the information in the <string:artist> area of the URI, in order to perform the lookup function
+    :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
+    :return: Returns the response webpage using the Response() class from Flask
+    """
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)
@@ -192,8 +203,11 @@ def lyric_discombob(track, artist, album):
             response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
             # Convert the lyrics here
             lyrics = discombob.discombob(lyrics)
-            lyrics = lyrics.replace("\n", "<br/>")
-            response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
+            if lyrics == False:
+                response.append("</tr></table><br/>Sorry, this track doesn't appear to be able to be discombobulated!")
+            else:
+                lyrics = lyrics.replace("\n", "<br/>")
+                response.append(f"</tr></table><br/><b>Discombobulated!  Recombobulate by clicking the track link above</b><br/><br/>{lyrics}")
         response = "".join(response)
         if empty_track == True:
             return Response(response, status=400)
