@@ -179,3 +179,52 @@ Because I'm not who I used to be"""
 
     with open("./tests/mock/death_cab_lyrics.pickle", "wb") as file:
         pickle.dump(death_cab_lyrics, file)
+
+    brand_new_lyrics_italics = """whatever poison's in this bottle will leave me broken sore and stiff.
+but it's the genie at the bottom who i'm sucking at. he owes me one last wish.
+so here's a present to let you know i still exist.
+i hope the next boy that you kiss has something terribly contagious on his lips.
+
+but i got a plan (i got a plan)
+drink (drift) for forty days and forty nights.
+a sip for every second-hand tick.
+and for every time you fed me the line, "you mean so much to me...".
+i'm without you.
+
+<i>[chorus x2]</i>
+so tell all the english boys you meet, about the american boy back in the states.
+the american boy you used to date.
+who would do anything you say.
+
+(and even if her plane)
+and even if her plane crashes tonight she'll find some way to disappoint me,
+by not burning in the wreckage, or drowning at the bottom of the sea.
+"jess, i still taste you, thus reserve my right to hate you."
+and all this empty space that you create does nothing for my flawless sense of style.
+
+it's 8:45 (it's 8:45). the weather is getting better by the hour.
+(rains all the time) i hope it rains there all the time.
+and if you ever said you miss me then don't say you never lied.
+i'm without you.
+
+<i>[chorus x2]</i>
+so tell all the english boys you meet, about the american boy back in the states.
+the american boy you used to date.
+who would do anything you say.
+
+who would do anything you say
+
+never gonna get it right, you're never gonna get it <i>[x7]</i>
+
+<i>[x2 (previous singing continues in the background)]</i>
+no more songs about you
+after this one, i am done
+you are, you are, you're gone
+
+<i>[chorus x2 (previous singing continues in the background)]</i>
+so tell all the english boys you meet, about the american boy back in the states.
+the american boy you used to date.
+who would do anything you say."""
+
+    with open("./tests/mock/brand_new_lyrics_italics.pickle", "wb") as file:
+        pickle.dump(brand_new_lyrics_italics, file)

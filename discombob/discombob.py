@@ -6,7 +6,8 @@ import random
 import pickle
 
 WORD_STORE = {}
-SPEC_CHAR = r"[ ,.!@#$%^&*()_+=\-/\\'\":;?\[\]]"
+SPEC_CHAR_LINE = r"<>[@#$%^&*_+=\-/\\'\":;?\[\]0-9]"
+SPEC_CHAR_WORD = r".,!<>[@#$%^&*()_+=\-/\\'\":;?\[\]0-9]"
 
 # Downloads the tagger required if it cannot be found by NLTK
 try:
@@ -17,66 +18,51 @@ except LookupError:
 with open('./discombob/word_store.pickle', 'rb') as file:
     WORD_STORE = pickle.load(file)
 
+
 def discombob(lyrics: str):
     result_list = []
-    lyric_result = ""
 
-    word_list = lyric_split(lyrics.lower())
-    # If the word-list only contains a single word, this may indicate that it is instrumental or incomprehensible
-    if len(word_list) < 2:
-        return False    
+    line_list = re.split("\n", lyrics.lower())
     
-    syllable_list = syllable_counter(word_list)
-    word_list = nltk.pos_tag(word_list)
+    if len(line_list) == 1:
+        if len(lyrics.split()) < 2:
+            return False
 
-    for i, sylb_count in enumerate(syllable_list):
-        result_list.append(discombob_word(word_list[i], sylb_count))
-
-    for word in result_list:
-        if word == "\n":
-            lyric_result += word
-        else:
-            lyric_result += f'{word} '
+    for line in line_list:
+        result_list.append(discombob_line(line))
     
-    return lyric_result
+    return "".join(result_list)
 
-def discombob_word(word, sylb_count):
+def discombob_line(line):
+    line_result = []
+
+    if line == "":
+        return "\n"
+
+    if line[0] in SPEC_CHAR_LINE or line[-1] in SPEC_CHAR_LINE:
+        return line.capitalize() + "\n"
+
+    word_list = nltk.pos_tag(line.split())
+
+    for word in word_list:
+        line_result.append(discombob_word(word))
+    
+    return " ".join(line_result).capitalize() + "\n"
+
+def discombob_word(word):
         failout = 0
 
-        if sylb_count == "NEWLINE" or word[0] == "NEWLINE":
-            return "\n"
+        sylb_count = syllapy.count(word[0])
 
-        # Directly return any proper nouns
-        elif sylb_count not in WORD_STORE or word[1] in ['NNP', 'NNPS'] or word[0][-1] in SPEC_CHAR:
+        # Directly return any proper nouns or special character wrapped words
+        if sylb_count not in WORD_STORE or word[1] in ['NNP', 'NNPS', 'PRP']:
+            return word[0].capitalize()
+        elif word[0][-1] in SPEC_CHAR_WORD or word[0][0] in SPEC_CHAR_WORD:
             return word[0]
         else:
-            while failout < 25:
+            while failout < 10000:
                 num = random.randrange(0, len(WORD_STORE[sylb_count]))
                 if WORD_STORE[sylb_count][num][1] == word[1]:
                     return (WORD_STORE[sylb_count][num][0])
                 failout += 1
             return word[0]
-                
-
-def syllable_counter(word_list: list):
-    syllable_list = []
-
-    for word in word_list:
-        if len(word) < 1:
-            continue
-        if word == "NEWLINE":
-            syllable_list.append(word)
-            continue
-        else:
-            count = syllapy.count(word)
-            if count > 0:
-                syllable_list.append(count)
-
-    return syllable_list
-
-def lyric_split(lyrics: str):
-    word_list = lyrics.replace("\n", " NEWLINE ")
-    word_list = re.split(" |,|-", word_list)
-    word_list = [x for x in word_list if len(x) >= 1]
-
-    return word_list

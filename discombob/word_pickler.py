@@ -38,4 +38,4 @@ if __name__ == "__main__":
         pickle.dump(word_store, file)
 
 else:
-    print("Hey, you gotta run me manually!")
+    print("Hey, you gotta run the word_pickler manually!")
