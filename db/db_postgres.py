@@ -350,9 +350,98 @@ class DbFunctions():
             return NOT_FOUND
         return result
 
+# TODO API update refactor
+# Why do I save so much info in check = ?
+
+    def update_artist(self, artist, new_name):
+        with Session(self.database) as db:
+            check = db.execute("SELECT name FROM artists WHERE name ILIKE :artist", {"artist", artist}).fetchone()
+
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("UPDATE artists SET name = :new_name WHERE name = :artist", {"new_name": new_name, "artist": artist})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def update_album(self, artist, album, new_title):
+        with Session(self.database) as db:
+            check = db.execute("SELECT albums.artist_id, artists.name, albums.album_title FROM albums JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album", {"artist": artist, "album": album}).fetchone()
+        
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("UPDATE albums SET album_title = :new_title WHERE album_title = :album AND artist_id = :artist_id", {"new_title": new_title, "album": album, "artist_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def update_track(self, artist, album, track, new_title):
+        with Session(self.database) as db:
+            check = db.execute("SELECT tracks.album_id, tracks.track_title, artists.name, albums.album_title FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album and tracks.track_title = :track", {"artist": artist, "album": album, "track": track}).fetchone()
+        
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("UPDATE tracks SET track_title = :new_title WHERE track_title = :track AND album_id = :album_id", {"new_title": new_title, "track": track, "album_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def update_lyrics(self, artist, album, track, new_lyrics):
+        with Session(self.database) as db:
+            check = db.execute("SELECT tracks.album_id, tracks.track_title, artists.name, albums.album_title FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album and tracks.track_title = :track", {"artist": artist, "album": album, "track": track}).fetchone()
+        
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("UPDATE tracks SET lyrics = :new_lyrics WHERE track_title = :track AND album_id = :album_id", {"new_lyrics": new_lyrics, "track": track, "album_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def delete_artist(self, artist):
+        with Session(self.database) as db:
+            check = db.execute("SELECT artist_id, name FROM artists WHERE name ILIKE :artist", {"artist", artist}).fetchone()
+
+        if check != None:
+            db.execute("DELETE FROM artists WHERE artist_id = :artist_id", {"artist_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def delete_album(self, artist, album):
+        with Session(self.database) as db:
+            check = db.execute("SELECT albums.album_id, artists.name, albums.album_title FROM albums JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album", {"artist": artist, "album": album}).fetchone()
+
+        if check != None:
+            db.execute("DELETE FROM albums WHERE album_id = :album_id", {"album_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def delete_track(self, artist, album, track):
+        with Session(self.database) as db:
+            check = db.execute("SELECT tracks.album_id, tracks.track_title, artists.name, albums.album_title FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album and tracks.track_title = :track", {"artist": artist, "album": album, "track": track}).fetchone()
+        
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("DELETE FROM tracks WHERE track_title = :track AND album_id = :album_id", {"track": track, "album_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
+    def delete_lyrics(self, artist, album, track):
+        with Session(self.database) as db:
+            check = db.execute("SELECT tracks.album_id, tracks.track_title, artists.name, albums.album_title FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name = :artist AND albums.album_title = :album and tracks.track_title = :track", {"artist": artist, "album": album, "track": track}).fetchone()
+        
+        if check != None:
+            with Session(self.database) as db:
+                db.execute("UPDATE tracks SET lyrics = NULL WHERE track_title = :track AND album_id = :album_id", {"track": track, "album_id": check[0]})
+            return SUCCESS_NO_RESPONSE
+        else:
+            return NOT_FOUND
+
     def close(self):
         """
-        Close database access cleanly.
+        Close database access cleanly
         Used in unittesting
         """
         self.database.dispose()
