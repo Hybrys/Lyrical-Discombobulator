@@ -16,7 +16,7 @@
 \connect database
 
 -- Dumping structure for table database.albums
-CREATE TABLE IF NOT EXISTS albums (album_id INTEGER PRIMARY KEY, album_title TEXT, artist_id INTEGER, isparsed BOOLEAN, FOREIGN KEY(artist_id) REFERENCES artists(artist_id), UNIQUE(album_title, artist_id));
+CREATE TABLE IF NOT EXISTS albums (album_id SERIAL PRIMARY KEY, album_title TEXT, artist_id INTEGER, isparsed BOOLEAN, FOREIGN KEY(artist_id) REFERENCES artists(artist_id), UNIQUE(album_title, artist_id));
 
 -- Dumping data for table database.albums: -1 rows
 /*!40000 ALTER TABLE "albums" DISABLE KEYS */;
