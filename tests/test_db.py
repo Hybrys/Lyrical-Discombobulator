@@ -50,7 +50,7 @@ class DBTesting(unittest.TestCase):
         self.assertEqual(resp, NOT_FOUND)
 
         resp = self.db.add_album_tracks("Death Cab for Cutie", "Codes and Keys", [])
-        self.assertEqual(resp, NO_ITEM_TO_ADD)
+        self.assertEqual(resp, NOT_FOUND)
 
         self.db.add_artist_albums("Death Cab for Cutie", ["Codes and Keys"])
         resp = self.db.add_album_tracks("Death Cab for Cutie", "Codes and Keys", ["Underneath the Sycamore"])
@@ -70,7 +70,7 @@ class DBTesting(unittest.TestCase):
         self.assertEqual(resp, NOT_FOUND)
 
         resp = self.db.add_track_lyrics("Death Cab for Cutie", "Codes and Keys", "Underneath the Sycamore", "")
-        self.assertEqual(resp, NO_ITEM_TO_ADD)
+        self.assertEqual(resp, NOT_FOUND)
 
         self.db.add_album_tracks("Death Cab for Cutie", "Codes and Keys", ["Underneath the Sycamore"])
         resp = self.db.add_track_lyrics("Death Cab for Cutie", "Codes and Keys", "Underneath the Sycamore", "Lyrics here! Get your lyrics here!")

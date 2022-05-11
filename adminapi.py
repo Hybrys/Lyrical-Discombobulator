@@ -35,13 +35,10 @@ def add_artist(artist):
 @bp.route('/addalbum/<string:artist>/<string:album>', methods=['POST'])
 @auth.login_required
 def add_album(artist, album):
-    artist = artist.title()
     album = album.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
-        
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
+
     resp = database.add_artist_albums(artist, [album])
 
     if resp == SUCCESS_NO_RESPONSE:
@@ -52,13 +49,9 @@ def add_album(artist, album):
 @bp.route('/addtrack/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
 def add_track(artist, album, track):
-    artist = artist.title()
-    album = album.title()
     track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     resp = database.add_album_tracks(artist, album, [track])
 
@@ -70,13 +63,8 @@ def add_track(artist, album, track):
 @bp.route('/addlyrics/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
 def add_lyrics(artist, album, track):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     if 'lyrics' not in request.json:
         return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against lyrics in the json data", status=500)
@@ -93,7 +81,6 @@ def add_lyrics(artist, album, track):
 @bp.route('/updateartist/<string:artist>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_artist(artist):
-    artist = artist.title()
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     if 'artist' not in request.json:
@@ -112,12 +99,8 @@ def update_artist(artist):
 @bp.route('/updatealbum/<string:artist>/<string:album>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_album(artist, album):
-    artist = artist.title()
-    album = album.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response("Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response("Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "album" not in request.json:
         return Response("You need to specify a new album name in a JSON with the key 'album'!", status=500)
     if len(request.json['album']) < 2:
@@ -134,17 +117,12 @@ def update_album(artist, album):
 @bp.route('/updatetrack/<string:artist>/<string:album>/<string:track>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_track(artist, album, track):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "track" not in request.json:
         return Response("You need to specify a new track name in a JSON with the key 'track'!", status=500)
     if len(request.json['track']) < 1:
-        return Response(f"The new tracks name should also contain at least one characters!", status=500)
+        return Response(f"The new tracks name should also contain at least one character!", status=500)
 
     resp = database.update_track(artist, album, track, request.json["track"])
 
@@ -156,13 +134,8 @@ def update_track(artist, album, track):
 @bp.route('/updatelyrics/<string:artist>/<string:album>/<string:track>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_lyrics(artist, album, track):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if 'lyrics' not in request.json:
         return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the json data")
 
@@ -177,7 +150,6 @@ def update_lyrics(artist, album, track):
 @bp.route('/deleteartist/<string:artist>', methods=['DELETE'])
 @auth.login_required
 def delete_artist(artist):
-    artist = artist.title()
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     
@@ -197,13 +169,8 @@ def delete_artist(artist):
 @bp.route('/deletealbum/<string:artist>/<string:album>', methods=['DELETE'])
 @auth.login_required
 def delete_album(artist, album):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     # Destructive deletes require a confirmation keyword in the JSON body
     if 'confirm' not in request.json:
@@ -221,13 +188,8 @@ def delete_album(artist, album):
 @bp.route('/deletetrack/<string:artist>/<string:album>/<string:track>', methods=['DELETE'])
 @auth.login_required
 def delete_track(artist, album, track):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     
     # Destructive deletes require a confirmation keyword in the JSON body
     if 'confirm' not in request.json:
@@ -246,13 +208,8 @@ def delete_track(artist, album, track):
 @bp.route('/deletelyrics/<string:artist>/<string:album>/<string:track>', methods=['DELETE'])
 @auth.login_required
 def delete_lyrics(artist, album, track):
-    artist = artist.title()
-    album = album.title()
-    track = track.title()
-    if len(artist.replace(' ', '')) < 2:
-        return Response(f"Seems like most artists should contain at least two characters!", status=500)
-    if len(album.replace(' ', '')) < 2:
-        return Response(f"Seems like this album should have at least two characters in it!", status=500)
+    if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
+        return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     
     # Destructive deletes require a confirmation keyword in the JSON body
     if 'confirm' not in request.json:
