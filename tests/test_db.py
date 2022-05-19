@@ -251,6 +251,109 @@ class DBTesting(unittest.TestCase):
         resp = self.db.lyric_lookup("test")
         self.assertEqual(resp, [("Motion City Soundtrack", "Commit This to Memory", "Feel Like Rain")])
 
+    def test_update_artist(self):
+        resp = self.db.update_artist("My American Heart", "Changed")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("My American Heart")
+        resp = self.db.update_artist("My American Heart", "Changed")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.add_artist("My American Heart")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.add_artist("Changed")
+        self.assertEqual(resp, NAME_COLLIDED)
+
+    def test_update_album(self):
+        resp = self.db.update_album("My American Heart", "Hiding Inside The Horrible Weather", "Changed")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("My American Heart")
+        self.db.add_artist_albums("My American Heart", ["Hiding Inside The Horrible Weather"])
+        resp = self.db.update_album("My American Heart", "Hiding Inside The Horrible Weather", "Changed")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_artist_albums("My American Heart")
+        self.assertEqual(resp, [["My American Heart", "Changed"]])
+
+    def test_update_tracks(self):
+        resp = self.db.update_track("My American Heart", "Hiding Inside The Horrible Weather", "Tired and Uninspired", "Changed")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("My American Heart")
+        self.db.add_artist_albums("My American Heart", ["Hiding Inside The Horrible Weather"])
+        self.db.add_album_tracks("My American Heart", "Hiding Inside The Horrible Weather", ["Tired and Uninspired"])
+        resp = self.db.update_track("My American Heart", "Hiding Inside The Horrible Weather", "Tired and Uninspired", "Changed")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_album_tracks("Hiding Inside The Horrible Weather")
+        self.assertEqual(resp, [["My American Heart", "Hiding Inside The Horrible Weather", "Changed"]])
+
+    def test_update_lyrics(self):
+        resp = self.db.update_lyrics("My American Heart", "Hiding Inside The Horrible Weather", "Tired and Uninspired", "Changed")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("My American Heart")
+        self.db.add_artist_albums("My American Heart", ["Hiding Inside The Horrible Weather"])
+        resp = self.db.add_album_tracks("My American Heart", "Hiding Inside The Horrible Weather", ["Tired and Uninspired"])
+        resp = self.db.add_track_lyrics("My American Heart", "Hiding Inside The Horrible Weather", "Tired and Uninspired", "Some amazing lyrics are here!")
+        resp = self.db.update_lyrics("My American Heart", "Hiding Inside The Horrible Weather", "Tired and Uninspired", "Changed")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_track_lyrics("Tired and Uninspired", "My American Heart", "Hiding Inside The Horrible Weather")
+        self.assertEqual(resp, (SUCCESS_NO_RESPONSE, [('Tired and Uninspired', 'Changed', 'My American Heart', 'Hiding Inside The Horrible Weather')]))
+
+    def test_delete_artist(self):
+        resp = self.db.delete_artist("Acroma")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("Acroma")
+        resp = self.db.delete_artist("Acroma")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.add_artist("Acroma")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+    def test_delete_album(self):
+        resp = self.db.delete_album("Acroma", "Orbitals")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("Acroma")
+        self.db.add_artist_albums("Acroma", ["Orbitals"])
+        resp = self.db.delete_album("Acroma", "Orbitals")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_artist_albums("Acroma")
+        self.assertEqual(resp, NO_CONTENT)
+
+    def test_delete_track(self):
+        resp = self.db.delete_track("Acroma", "Orbitals", "Big Karma Now")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("Acroma")
+        self.db.add_artist_albums("Acroma", ["Orbitals"])
+        self.db.add_album_tracks("Acroma", "Orbitals", ["Big Karma Now"])
+        resp = self.db.delete_track("Acroma", "Orbitals", "Big Karma Now")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_album_tracks("Orbitals")
+        self.assertEqual(resp, NO_CONTENT)
+
+    def test_delete_lyrics(self):
+        resp = self.db.delete_lyrics("Acroma", "Orbitals", "Big Karma Now")
+        self.assertEqual(resp, NOT_FOUND)
+
+        self.db.add_artist("Acroma")
+        self.db.add_artist_albums("Acroma", ["Orbitals"])
+        self.db.add_album_tracks("Acroma", "Orbitals", ["Big Karma Now"])
+        self.db.add_track_lyrics("Acroma", "Orbitals", "Big Karma Now", "We've got some lyrics here!")
+        resp = self.db.delete_lyrics("Acroma", "Orbitals", "Big Karma Now")
+        self.assertEqual(resp, SUCCESS_NO_RESPONSE)
+
+        resp = self.db.view_track_lyrics("Big Karma Now", "Acroma", "Orbitals")
+        self.assertEqual(resp, (3, [('Big Karma Now', None, 'Acroma', 'Orbitals')]))
+
 def setup_test_db():
     # Find out if I'm containerized
     container_check = os.environ.get('CONTAINER_DB')

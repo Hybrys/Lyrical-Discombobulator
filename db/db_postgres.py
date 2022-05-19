@@ -62,19 +62,29 @@ class DbFunctions():
         :return: SUCCESS_NO_RESPONSE if successful, or
                  NO_ITEM_TO_ADD if the list of albums is empty
         """
+        duplicate_found = 0
 
-        if albums != None and albums != []:
-            with Session(self.database) as db:
-                artist_id = db.execute("SELECT artist_id FROM artists WHERE name = :name", {"name": artist}).fetchone()
-                if artist_id == None:
-                    return NOT_FOUND
-                for album in albums:
-                    db.execute("INSERT INTO albums (album_title, artist_id, isparsed) VALUES (:album, :artist_id, :isparsed) ON CONFLICT DO NOTHING", {"album": album, "artist_id": artist_id[0], "isparsed": False})
-                db.execute("UPDATE artists SET isparsed = :isparsed WHERE artist_id = :artist_id", {"isparsed": True, "artist_id": artist_id[0]})
-                db.commit()
-            return SUCCESS_NO_RESPONSE
-        else:
+        if albums == None or albums == []:
             return NO_ITEM_TO_ADD
+
+        with Session(self.database) as db:
+            artist_id = db.execute("SELECT artist_id FROM artists WHERE name = :name", {"name": artist}).fetchone()
+        if artist_id == None:
+            return NOT_FOUND
+
+        with Session(self.database) as db:    
+            for album in albums:
+                dupe_check = db.execute("SELECT * FROM albums WHERE artist_id = :artist_id AND album_title = :album_title", {"artist_id": artist_id[0], "album_title": album}).fetchone()
+                if dupe_check == None:
+                    db.execute("INSERT INTO albums (album_title, artist_id, isparsed) VALUES (:album, :artist_id, :isparsed)", {"album": album, "artist_id": artist_id[0], "isparsed": False})
+                else:
+                    duplicate_found = 1
+            db.execute("UPDATE artists SET isparsed = :isparsed WHERE artist_id = :artist_id", {"isparsed": True, "artist_id": artist_id[0]})
+            db.commit()
+        if duplicate_found != 0:
+            return NAME_COLLIDED
+        return SUCCESS_NO_RESPONSE
+
 
     def add_album_tracks(self, artist, album, tracks):
         """
@@ -113,11 +123,12 @@ class DbFunctions():
                  NO_ITEM_TO_ADD if the track string is empty
         """
         album_id = self.album_artist_match(artist, album)
+        if album_id == NOT_FOUND:
+            return NOT_FOUND
         
         with Session(self.database) as db:
             track_check = db.execute("SELECT track_id FROM tracks WHERE track_title ILIKE :track_title AND album_id = :album_id", {"track_title": f"%{track}%", "album_id": album_id}).fetchone()
-        
-        if album_id == NOT_FOUND or track_check == None:
+        if track_check == None:
             return NOT_FOUND
 
         if lyrics != None and lyrics != "":
@@ -351,8 +362,16 @@ class DbFunctions():
         return result
 
     def update_artist(self, artist, new_name):
+        """
+        Updates an artists name (via admin API) maintaining the artists id
+
+        :param artist: Existing artists name as a string
+        :param new_name: The new name that the artist should have
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NO_ITEM_TO_ADD if the list of albums is empty
+        """
         with Session(self.database) as db:
-            check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist", artist}).fetchone()
+            check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist": artist}).fetchone()
 
         if check != None:
             with Session(self.database) as db:
@@ -368,9 +387,13 @@ class DbFunctions():
         
         if check != None:
             with Session(self.database) as db:
-                db.execute("UPDATE albums SET album_title = :new_title WHERE album_id = :album_id AND artist_id = :artist_id", {"new_title": new_title, "album_id": check[0], "artist_id": check[1]})
-                db.commit()
-            return SUCCESS_NO_RESPONSE
+                dupe_check = db.execute("SELECT albums.album_id, albums.artist_id FROM albums JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album", {"artist": artist, "album": new_title}).fetchone()
+            if dupe_check == None:
+                with Session(self.database) as db:
+                    db.execute("UPDATE albums SET album_title = :new_title WHERE album_id = :album_id AND artist_id = :artist_id", {"new_title": new_title, "album_id": check[0], "artist_id": check[1]})
+                    db.commit()
+                return SUCCESS_NO_RESPONSE
+            return NAME_COLLIDED
         else:
             return NOT_FOUND
 
@@ -400,7 +423,7 @@ class DbFunctions():
 
     def delete_artist(self, artist):
         with Session(self.database) as db:
-            check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist", artist}).fetchone()
+            check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist": artist}).fetchone()
 
         if check != None:
             with Session(self.database) as db:

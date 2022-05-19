@@ -7,14 +7,14 @@ Debug currently True
 
 from flask import Flask, Response
 from urllib.parse import unquote, quote
-from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
+from db.db_postgres import DbFunctions, NOT_FOUND, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
 from discombob import discombob
-import adminapi
+import api.adminroutes as adminroutes
 
 database = DbFunctions()
 
 app = Flask(__name__)
-app.register_blueprint(adminapi.bp)
+app.register_blueprint(adminroutes.bp)
 
 @app.get("/")
 def index():

@@ -7,3 +7,4 @@ pg8000
 requests
 ujson
 nltk
+flask_httpauth

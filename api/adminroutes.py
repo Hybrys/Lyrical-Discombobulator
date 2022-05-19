@@ -2,8 +2,9 @@
 This API is intended to offer administrator-only access that allows modifications to the database and doing manual runs of the scraper
 """
 
+from os import dup
 from flask import Blueprint, Response, request
-from db.db_postgres import DbFunctions, NOT_FOUND, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE
+from db.db_postgres import NAME_COLLIDED, NO_CONTENT, DbFunctions, NOT_FOUND, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
 
@@ -30,7 +31,10 @@ def add_artist(artist):
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     resp = database.add_artist(artist)
-    return Response(f"{artist} added to the database!")
+    if resp == SUCCESS_NO_RESPONSE:
+        return Response(f"{artist} added to the database!")
+    else:
+        return Response(f"{artist} already exists in the database!", status=500)
 
 @bp.route('/addalbum/<string:artist>/<string:album>', methods=['POST'])
 @auth.login_required
@@ -40,9 +44,11 @@ def add_album(artist, album):
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     resp = database.add_artist_albums(artist, [album])
-
+    print(resp)
     if resp == SUCCESS_NO_RESPONSE:
         return Response(f"Added {album} for {artist} to the database!")
+    elif resp == NAME_COLLIDED:
+        return Response(f"The album {album} by {artist} already exists!  Please pick something unique to rename it to.", status=500)
     elif resp == NOT_FOUND:
         return Response(f"The artist {artist} wasn't found in the database!  It needs to exist before we can add albums to it!", status=500)
 
@@ -52,6 +58,10 @@ def add_track(artist, album, track):
     track = track.title()
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
+
+    dupe_check = database.view_track_lyrics(track, artist, album)
+    if dupe_check[0] != NOT_FOUND:
+        return Response(f"That track '{track}' on {album} by {artist} already exists!", status=500)
 
     resp = database.add_album_tracks(artist, album, [track])
 
@@ -85,16 +95,24 @@ def update_artist(artist):
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     if 'artist' not in request.json:
         return Response(f"You need to specify a new artist name in a JSON with the key 'artist'!", status=500)
-    if len(request.json['artist']) < 2:
+    try:
+        new_name = request.json['artist'].title()
+    except AttributeError:
+        return Response("You need to wrap the name in quotes!  Integers won't work", status=500)
+    if len(new_name) < 2:
         return Response(f"The new artists name should also contain at least two characters!", status=500)
 
-    resp = database.update_artist(artist, request.json["artist"])
+    dupe_check = database.view_artist_albums(new_name)
+    if dupe_check != NOT_FOUND:
+        return Response(f"The artist {new_name} already exists!  Please pick another name to rename the artist to.", status=500)
+
+    resp = database.update_artist(artist, new_name)
 
     if resp == SUCCESS_NO_RESPONSE:
-        return Response(f"{artist} has been renamed to {request.json['artist']}")
+        return Response(f"{artist} has been renamed to {new_name}")
     elif resp == NOT_FOUND:
         return Response(f"I can't find the original artist!", status=500)
-    
+
 
 @bp.route('/updatealbum/<string:artist>/<string:album>', methods=['PUT', 'PATCH'])
 @auth.login_required
@@ -103,13 +121,19 @@ def update_album(artist, album):
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "album" not in request.json:
         return Response("You need to specify a new album name in a JSON with the key 'album'!", status=500)
-    if len(request.json['album']) < 2:
+    try:
+        new_name = request.json['album'].title()
+    except AttributeError:
+        return Response("You need to wrap the name in quotes!  Integers won't work", status=500)
+    if len(new_name) < 2:
         return Response(f"The new albums name should also contain at least two characters!", status=500)
 
-    resp = database.update_album(artist, album, request.json["album"])
+    resp = database.update_album(artist, album, new_name)
     
     if resp == SUCCESS_NO_RESPONSE:
-        return Response(f"{album} has been renamed to {request.json['album']}")
+        return Response(f"{album} has been renamed to {new_name}")
+    elif resp == NAME_COLLIDED:
+        return Response(f"The album {new_name} by {artist} already exists!  Please pick something unique to rename it to.", status=500)
     elif resp == NOT_FOUND:
         return Response(f"I can't find {album} by {artist}!", status=500)
     
@@ -121,13 +145,21 @@ def update_track(artist, album, track):
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "track" not in request.json:
         return Response("You need to specify a new track name in a JSON with the key 'track'!", status=500)
-    if len(request.json['track']) < 1:
-        return Response(f"The new tracks name should also contain at least one character!", status=500)
+    try:
+        new_name = request.json['track'].title()
+    except AttributeError:
+        return Response("You need to wrap the name in quotes!  Integers won't work", status=500)
+    if len(new_name) < 2:
+        return Response(f"The new albums name should also contain at least two characters!", status=500)
 
-    resp = database.update_track(artist, album, track, request.json["track"])
+    dupe_check = database.view_track_lyrics(new_name, artist, album)
+    if dupe_check[0] != NOT_FOUND:
+        return Response(f"That track '{new_name}' on {album} by {artist} already exists!", status=500)
+
+    resp = database.update_track(artist, album, track, new_name)
 
     if resp == SUCCESS_NO_RESPONSE:
-        return Response(f"{track} has been renamed to {request.json['track']}")
+        return Response(f"{track} has been renamed to {new_name}")
     elif resp == NOT_FOUND:
         return Response(f"I can't find {track} from the album {album} by {artist}!", status=500)
 
@@ -137,7 +169,7 @@ def update_lyrics(artist, album, track):
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if 'lyrics' not in request.json:
-        return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the json data")
+        return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the json data", status=500)
 
     resp = database.update_lyrics(artist, album, track, request.json['lyrics'])
 
@@ -155,9 +187,9 @@ def delete_artist(artist):
     
     # Destructive deletes require a confirmation keyword in the JSON body
     if 'confirm' not in request.json:
-        return Response("If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.")
+        return Response("If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.", status=500)
     if request.json['confirm'] != "True":
-        return Response("You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.")
+        return Response("You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.", status=500)
 
     resp = database.delete_artist(artist)
 
