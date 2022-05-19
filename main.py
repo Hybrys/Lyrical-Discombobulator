@@ -77,7 +77,6 @@ def view_album(album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     album = unquote(album)
     check = database.view_album_tracks(album)
@@ -125,7 +124,6 @@ def view_track(track, artist, album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)
@@ -171,7 +169,6 @@ def lyric_lookup(searchparam):
     :param searchparam: Accepts the information in the <string:searchparam> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    
     searchparam = unquote(searchparam)
     response = [f"These are the tracks that have the word or phrase '{searchparam}' in its lyrics:<br />", "<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
 
@@ -197,8 +194,6 @@ def lyric_discombob(track, artist, album):
     :param album: Accepts the information in the <string:album> area of the URI, in order to perform the lookup function
     :return: Returns the response webpage using the Response() class from Flask
     """
-    
-
     response = ["<table><tr><th>Artist</th><th>Album</th><th>Track</th></tr>"]
     track = unquote(track)
     artist = unquote(artist)

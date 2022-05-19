@@ -366,9 +366,9 @@ class DbFunctions():
         Updates an artists name (via admin API) maintaining the artists id
 
         :param artist: Existing artists name as a string
-        :param new_name: The new name that the artist should have
+        :param new_name: The new name that the artist should have as a string
         :return: SUCCESS_NO_RESPONSE if successful, or
-                 NO_ITEM_TO_ADD if the list of albums is empty
+                 NOT_FOUND if the existing artist cannot be found
         """
         with Session(self.database) as db:
             check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist": artist}).fetchone()
@@ -382,6 +382,16 @@ class DbFunctions():
             return NOT_FOUND
 
     def update_album(self, artist, album, new_title):
+        """
+        Updates an albums name (via admin API) maintaining the album id
+
+        :param artist: The target artists name as a string
+        :param album: The existing album title to be changed as a string
+        :param new_name: The new title that the album should have as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NAME_COLLIDED if the intended new name is already in use, or
+                 NOT_FOUND if the existing album cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT albums.album_id, albums.artist_id FROM albums JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album", {"artist": artist, "album": album}).fetchone()
         
@@ -398,6 +408,16 @@ class DbFunctions():
             return NOT_FOUND
 
     def update_track(self, artist, album, track, new_title):
+        """
+        Updates a tracks title (via admin API) maintaining the track id
+
+        :param artist: The target artists name as a string
+        :param album: The target album title as a string
+        :param track: The existing track title to be changed as a string
+        :param new_name: The new title that the track should have as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the existing track cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT tracks.track_id, tracks.album_id FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album and tracks.track_title ILIKE :track", {"artist": artist, "album": album, "track": track}).fetchone()
         
@@ -410,6 +430,16 @@ class DbFunctions():
             return NOT_FOUND
 
     def update_lyrics(self, artist, album, track, new_lyrics):
+        """
+        Updates a tracks lyrics (via admin API) by directly overwriting them
+
+        :param artist: The target artists name as a string
+        :param album: The target album title as a string
+        :param track: The target track title as a string
+        :param new_lyrics: The new lyrics that the track should have as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the existing track cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT tracks.track_id, tracks.album_id FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album and tracks.track_title ILIKE :track", {"artist": artist, "album": album, "track": track}).fetchone()
         
@@ -422,6 +452,13 @@ class DbFunctions():
             return NOT_FOUND
 
     def delete_artist(self, artist):
+        """
+        Deletes an artist from the database (via admin API) with cascading deletes that remove all associated albums and tracks
+
+        :param artist: The artist name to be deleted as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the artist cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT artist_id FROM artists WHERE name ILIKE :artist", {"artist": artist}).fetchone()
 
@@ -434,6 +471,14 @@ class DbFunctions():
             return NOT_FOUND
 
     def delete_album(self, artist, album):
+        """
+        Deletes an album from the database (via admin API) with cascading deletes that remove all associated tracks
+
+        :param artist: The target artists name as a string
+        :param album: The album to be deleted as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the album cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT albums.album_id FROM albums JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album", {"artist": artist, "album": album}).fetchone()
 
@@ -446,6 +491,15 @@ class DbFunctions():
             return NOT_FOUND
 
     def delete_track(self, artist, album, track):
+        """
+        Deletes a track from the database (via admin API)
+
+        :param artist: The target artists name as a string
+        :param album: The target album title as a string
+        :param track: The track to be deleted as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the album cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT tracks.track_id, tracks.album_id FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album and tracks.track_title ILIKE :track", {"artist": artist, "album": album, "track": track}).fetchone()
         
@@ -458,6 +512,15 @@ class DbFunctions():
             return NOT_FOUND
 
     def delete_lyrics(self, artist, album, track):
+        """
+        'Deletes' a tracks lyrics from the database (via admin API) by updating the lyrics with a Postgres NULL value
+
+        :param artist: The target artists name as a string
+        :param album: The target album title as a string
+        :param track: The target track to have the lyrics removed from as a string
+        :return: SUCCESS_NO_RESPONSE if successful, or
+                 NOT_FOUND if the track cannot be found
+        """
         with Session(self.database) as db:
             check = db.execute("SELECT tracks.track_id, tracks.album_id FROM tracks JOIN albums ON tracks.album_ID = albums.album_id JOIN artists ON artists.artist_id = albums.artist_id WHERE artists.name ILIKE :artist AND albums.album_title ILIKE :album and tracks.track_title ILIKE :track", {"artist": artist, "album": album, "track": track}).fetchone()
         
@@ -472,6 +535,6 @@ class DbFunctions():
     def close(self):
         """
         Close database access cleanly
-        Used in unittesting
+        Used in unittesting to resolve multiple instantiations of the DbFunctions class
         """
         self.database.dispose()

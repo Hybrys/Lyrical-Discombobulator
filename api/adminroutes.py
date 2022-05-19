@@ -4,7 +4,7 @@ This API is intended to offer administrator-only access that allows modification
 
 from os import dup
 from flask import Blueprint, Response, request
-from db.db_postgres import NAME_COLLIDED, NO_CONTENT, DbFunctions, NOT_FOUND, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE
+from db.db_postgres import DbFunctions, NAME_COLLIDED, NOT_FOUND, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
 
@@ -16,7 +16,12 @@ auth = HTTPBasicAuth()
 
 @bp.route('', methods=['GET'])
 def index():
-    return Response("This route serves a potential index page - a starting point.  It's not intended to be accessed, as I am merely a teapot.  Please read the documentation in README.md", status=418)
+    """
+    This is a route that serves the index of /admin
+
+    :return: Flask Response object with status code 418
+    """
+    return Response("This route serves a potential index page - a starting point.  It's not intended to be accessed, as I am merely a teapot.<br/><br/>Please read the documentation in README.md", status=418)
 
 @auth.verify_password
 def verify_password(username, password):
@@ -27,6 +32,12 @@ def verify_password(username, password):
 @bp.route('/addartist/<string:artist>', methods=['POST'])
 @auth.login_required
 def add_artist(artist):
+    """
+    This route requires one string: the name of the artist the name of the artist to be added to the database
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     artist = artist.title()
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
@@ -39,12 +50,18 @@ def add_artist(artist):
 @bp.route('/addalbum/<string:artist>/<string:album>', methods=['POST'])
 @auth.login_required
 def add_album(artist, album):
+    """
+    This route requires two strings: the name of the artist, and the name of the album to be added to the database
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     album = album.title()
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     resp = database.add_artist_albums(artist, [album])
-    print(resp)
+
     if resp == SUCCESS_NO_RESPONSE:
         return Response(f"Added {album} for {artist} to the database!")
     elif resp == NAME_COLLIDED:
@@ -55,6 +72,12 @@ def add_album(artist, album):
 @bp.route('/addtrack/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
 def add_track(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to be added to the database
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     track = track.title()
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
@@ -73,6 +96,13 @@ def add_track(artist, album, track):
 @bp.route('/addlyrics/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
 def add_lyrics(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to have the lyrics added to
+    Also requires a JSON with the key-pair of 'lyrics': 'value of the lyrics to be added'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
@@ -91,6 +121,13 @@ def add_lyrics(artist, album, track):
 @bp.route('/updateartist/<string:artist>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_artist(artist):
+    """
+    This route requires one string: the name of the artist to be updated
+    Also requires a JSON with the key-pair of 'artist': 'value of the new name for the artist'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     if 'artist' not in request.json:
@@ -117,6 +154,13 @@ def update_artist(artist):
 @bp.route('/updatealbum/<string:artist>/<string:album>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_album(artist, album):
+    """
+    This route requires two strings: the name of the artist, and the name of the album to be updated
+    Also requires a JSON with the key-pair of 'album': 'value of the new name for the album'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "album" not in request.json:
@@ -141,6 +185,13 @@ def update_album(artist, album):
 @bp.route('/updatetrack/<string:artist>/<string:album>/<string:track>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_track(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to be updated
+    Also requires a JSON with the key-pair of 'track': 'value of the new name for the track'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if "track" not in request.json:
@@ -166,6 +217,13 @@ def update_track(artist, album, track):
 @bp.route('/updatelyrics/<string:artist>/<string:album>/<string:track>', methods=['PUT', 'PATCH'])
 @auth.login_required
 def update_lyrics(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to update the lyrics of
+    Also requires a JSON with the key-pair of 'lyrics': 'value of the new lyrics for the track'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     if 'lyrics' not in request.json:
@@ -182,6 +240,13 @@ def update_lyrics(artist, album, track):
 @bp.route('/deleteartist/<string:artist>', methods=['DELETE'])
 @auth.login_required
 def delete_artist(artist):
+    """
+    This route requires one string: the name of the artist to be deleted
+    Also requires a JSON with the key-pair of 'confirm': 'True'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2:
         return Response(f"Seems like most artists should contain at least two characters!", status=500)
     
@@ -201,6 +266,13 @@ def delete_artist(artist):
 @bp.route('/deletealbum/<string:artist>/<string:album>', methods=['DELETE'])
 @auth.login_required
 def delete_album(artist, album):
+    """
+    This route requires two strings: the name of the artist, and the name of the album to be deleted
+    Also requires a JSON with the key-pair of 'confirm': 'True'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
@@ -220,6 +292,13 @@ def delete_album(artist, album):
 @bp.route('/deletetrack/<string:artist>/<string:album>/<string:track>', methods=['DELETE'])
 @auth.login_required
 def delete_track(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to be deleted
+    Also requires a JSON with the key-pair of 'confirm': 'True'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     
@@ -227,7 +306,7 @@ def delete_track(artist, album, track):
     if 'confirm' not in request.json:
         return Response("If you'd really like to delete this track, please include 'confirm': True in the JSON body.")
     if request.json['confirm'] != "True":
-        return Response("You'll need to take the safety off - please include 'confirm': True in the JSON body.")
+        return Response("You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.")
 
 
     resp = database.delete_track(artist, album, track)
@@ -240,6 +319,13 @@ def delete_track(artist, album, track):
 @bp.route('/deletelyrics/<string:artist>/<string:album>/<string:track>', methods=['DELETE'])
 @auth.login_required
 def delete_lyrics(artist, album, track):
+    """
+    This route requires three strings: the name of the artist, the name of the album, and the name of the track to have the lyrics deleted from
+    Also requires a JSON with the key-pair of 'confirm': 'True'
+
+    :return: Flask Response object on success, or
+             Flask Response object with a status code 500 on failure
+    """
     if len(artist.replace(' ', '')) < 2 or len(album.replace(' ', '')) < 2:
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
     
@@ -247,7 +333,7 @@ def delete_lyrics(artist, album, track):
     if 'confirm' not in request.json:
         return Response("If you'd really like to delete this track, please include 'confirm': True in the JSON body.")
     if request.json['confirm'] != "True":
-        return Response("You'll need to take the safety off - please include 'confirm': True in the JSON body.")
+        return Response("You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.")
 
     resp = database.delete_lyrics(artist, album, track)
 
