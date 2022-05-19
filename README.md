@@ -56,9 +56,7 @@ Not yet implemented
 # API Documentation
 
 ## Purpose
-This is to fulfill the API ask for the NuCamp Portfolio Project
-
-This API is not intended to touch the main database store, and thus has an empty database 'test' initialized.
+This is an administrator-only API intended to allow for the easy and quick modification of database values
 
 ## Adding items to the database
 #### Artist
@@ -67,23 +65,29 @@ This API is not intended to touch the main database store, and thus has an empty
     Adds the artist name of at least three characters in key ':artist' to the database.
 
     On success: HTTP Response ':artist added to the database!'
-    On failure: HTTP Response 'Seems like most artists should contain more than two characters!'
+    On failure:                 
+                Too few characters in key :artist
+                HTTP Response 500 'Seems like most artists should contain more than two characters!'
+
+                :artist already exists in the database
+                HTTP Response 500 ':artist already exists in the database!'
+
 
 #### Album
     POST /addalbum/:artist/:album
 
     Adds the album name at key ':album' of an existing artist at key ':artist' to the database.
 
-    On success: HTTP Response 200 'Added :album for :artist to the album database!'
+    On success: HTTP Response 200 'Added :album for :artist to the database!'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                :album referring to :artist already exists in the database
+                HTTP Response 500 'The album :album by :artist already exists!'
+
                 :artist doesn't exist in the database
-                HTTP Response 500 'The artist :artist wasn't found in the database!  It needs to exist before we can add albums to it!'
-
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
+                HTTP Response 500 'The artist :artist wasn't found in the database!'
 
 #### Tracks
     POST /addtrack/:artist/:album/:track
@@ -92,150 +96,225 @@ This API is not intended to touch the main database store, and thus has an empty
 
     On success: HTTP Response 200 'Added :track from :album by :artist to the database!'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                :track referring to :album and :artist already exists in the database
+                HTTP Response 500 'The track ':track' on :album by :artist already exists!
+
                 :album doesn't exist in the database
-                HTTP Response 500 'The album :album wasn't found in the database!  It needs to exist before we can add tracks to it!'
-
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
+                HTTP Response 500 'The album :album wasn't found in the database!'
 
 #### Lyrics
     POST /addlyrics/:artist/:album/:track
-    JSON body: {"lyrics": "example"}
+    JSON body: {'lyrics': "example"}
 
-    Adds the lyrics from JSON body key "lyrics" for existing track name at key ':track' of an existing album at key :album and an existing artist at key ':artist' to the database.
+    Adds the lyrics from JSON body key 'lyrics' for existing track name at key ':track' of an existing album at key :album and an existing artist at key ':artist' to the database.
 
     On success: HTTP Response 200 'Added lyrics to the track :track!'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'lyrics' doesn't exist
+                HTTP Response 500 'Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the JSON data'
+                
                 :track doesn't exist in the database
-                HTTP Response 500 'The track :track wasn't found in the database!  It needs to exist before we can add lyrics to it!'
+                HTTP Response 500 'The track :track wasn't found in the database!'
 
-                JSON body key "lyrics" doesn't exist
-                HTTP Response 500 'Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against lyrics in the json data'
-
-                JSON body key "lyrics" is empty
+                JSON body key 'lyrics' is empty
                 HTTP Response 500 'We found 'lyrics' in the JSON, but you need to specify some actual lyrics!'
-
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
 
 ## Updating items in the database
 #### Artist
     PUT /updateartist/:artist
-    JSON body: {"artist": "new artist name"} or
+    JSON body: {'artist': 'new artist name'} or
 
     PATCH /updateartist/:artist
-    JSON body: {"artist": "new artist name"}
+    JSON body: {'artist': 'new artist name'}
 
-    Updates the existing artist name from key :artist to the new JSON body key "artist"
+    Updates the existing artist name from key :artist to the new value in JSON body key 'artist'
 
-    On success: HTTP Response 200 ':artist has been renamed to "artist"'
+    On success: HTTP Response 200 ':artist has been renamed to :(JSON body key 'artist' value)'
     On failure: 
-                :artist doesn't exist in the database
-                HTTP Response 500 'I can't find the original artist!'
-
-                JSON body key "artist" doesn't exist
-                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'artist'!'
-
-                Too few characters in JSON body key "artist"
-                HTTP Response 500 'The new artists name should also contain at least two characters!'
-
                 Too few characters in key :artist
                 HTTP Response 500 'Seems like most artists should contain at least two characters!'
 
+                JSON body key 'artist' doesn't exist
+                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'artist'!'
+
+                An integer exists in JSON body key 'artist'
+                HTTP Response 500 'You need to wrap the name in quotes!  Integers won't work'
+
+                Too few characters in JSON body key 'artist'
+                HTTP Response 500 'The new artists name should also contain at least two characters!'
+
+                :(JSON key 'artist' value) already exists in the database
+                HTTP Response 500 'The artist :(JSON key 'artist' value) already exists!  Please pick another name to rename the artist to.'
+
+                :artist doesn't exist in the database
+                HTTP Response 500 'I can't find the original artist!'
+
 #### Album
     PUT /updatealbum/:artist/:album
-    JSON body: {"album": "new album name"} or
+    JSON body: {'album': 'new album name'} or
 
     PATCH /updatealbum/:artist/:album
-    JSON body: {"album": "new album name"}
+    JSON body: {'album': 'new album name'}
 
-    Updates the existing album name from key :album to the new JSON body key "album"
+    Updates the existing album name from key :album to the new value in JSON body key 'album'
 
-    On success: HTTP Response 200 ':album has been renamed to "album"'
+    On success: HTTP Response 200 ':album has been renamed to :(JSON body key 'album' value)'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'album' doesn't exist
+                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'album'!'
+
+                An integer exists in JSON body key 'album'
+                HTTP Response 500 'You need to wrap the name in quotes!  Integers won't work'
+
+                Too few characters in JSON body key 'album'
+                HTTP Response 500 'The new albums name should also contain at least two characters!'
+
+                :(JSON body key 'album' value) referring to :artist already exists in the database
+                HTTP Response 500 'The album :(JSON body key 'album' value) by :artist already exists!'
+
                 :album doesn't exist in the database
                 HTTP Response 500 'I can't find the original album!'
 
-                JSON body key "artist" doesn't exist
-                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'album'!'
-
-                Too few characters in JSON body key "artist"
-                HTTP Response 500 'The new artists name should also contain at least two characters!'
-
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
-
 #### Tracks
     PUT /updatetrack/:artist/:album/:track
-    JSON body: {"track": "new track name"} or
+    JSON body: {'track': 'new track name'} or
 
     PATCH /updatetrack/:artist/:album/:track
-    JSON body: {"track": "new track name"}
+    JSON body: {'track': 'new track name'}
 
-    Updates the existing track name from key :track to the new JSON body key "track"
+    Updates the existing track name from key :track to the new value in JSON body key 'track'
 
-    On success: HTTP Response 200 ':track has been renamed to "track"'
+    On success: HTTP Response 200 ':track has been renamed to :(JSON body key 'track' value)'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'track' doesn't exist
+                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'track'!'
+
+                An integer exists in JSON body key 'track'
+                HTTP Response 500 'You need to wrap the name in quotes!  Integers won't work'
+
+                Too few characters in JSON body key 'track'
+                HTTP Response 500 'The new artists name should also contain at least one characters!'
+
+                :(JSON body key 'track' value) referring to :album and :artist already exists in the database
+                HTTP Response 500 'The track ':(JSON body key 'track' value)' on :album by :artist already exists!'
+
                 :track doesn't exist in the database
                 HTTP Response 500 'I can't find the original track!'
 
-                JSON body key "track" doesn't exist
-                HTTP Response 500 'You need to specify a new artist name in a JSON with the key 'track'!'
-
-                Too few characters in JSON body key "track"
-                HTTP Response 500 'The new artists name should also contain at least one characters!'
-
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
 
 #### Lyrics
     PUT /updatelyrics/:artist/:album/:track
-    JSON body: {"lyrics": "new lyrics"} or
+    JSON body: {'lyrics': 'new lyrics'} or
 
     PATCH /updatelyrics/:artist/:album/:track
-    JSON body: {"lyrics": "new lyrics"}
+    JSON body: {'lyrics': 'new lyrics'}
 
-    Updates the existing tracks lyrics from key :track to the new JSON body key "lyrics"
+    Updates the existing tracks lyrics from key :track to the new value in JSON body key 'lyrics'
 
     On success: HTTP Response 200 ':track had its lyrics updated!'
     On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'lyrics' doesn't exist
+                HTTP Response 500 'Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the json data'
+
                 :track doesn't exist in the database
                 HTTP Response 500 'I can't find the original track!'
 
-                JSON body key "track" doesn't exist
-                HTTP Response 500 'Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the json data'
 
-                Too few characters in key :artist
-                HTTP Response 500 'Seems like most artists should contain more than two characters!'
-
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
 
 ## Delete
-#### Tracks
-    DELETE /deletetrack/:artist/:album/:track
+#### Artists
+    DELETE /deleteartist/:artist
+    JSON body: {'confirm': 'True'}
 
-    Deletes the existing track name from key :track to the new JSON body key "track"
+    Deletes the existing artist from key :artist from the database
+    Cascades removing all referenced albums and tracks
 
-    On success: HTTP Response 200 ':track deleted!'
+    On success: HTTP Response 200 ':artist has been deleted!'
     On failure: 
-                :track doesn't exist in the database
-                HTTP Response 500 'I can't find that track!'
-
                 Too few characters in key :artist
                 HTTP Response 500 'Seems like most artists should contain more than two characters!'
 
-                Too few characters in key :album
-                HTTP Response 500 'Seems like this album should contain more than two characters!'
+                JSON body key 'confirm' doesn't exist
+                HTTP Response 500 'If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                JSON body key 'confirm' does not have the value 'True'
+                HTTP Response 500 'You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                :track doesn't exist in the database
+                HTTP Response 500 'I can't find the artist :artist!'
+
+#### Albums
+    DELETE /deletealbum/:artist/:album
+    JSON body: {'confirm': 'True'}
+
+    Deletes the existing album from key :album referring to key :artist from the database
+    Cascades removing all referenced tracks
+
+    On success: HTTP Response 200 ':album has been deleted!'
+    On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'confirm' doesn't exist
+                HTTP Response 500 'If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                JSON body key 'confirm' does not have the value 'True'
+                HTTP Response 500 'You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                :album related to :artist doesn't exist in the database
+                HTTP Response 500 'I can't find the album :album by :artist!'
+
+#### Tracks
+    DELETE /deletetrack/:artist/:album/:track
+    JSON body: {'confirm': 'True'}
+
+    Deletes the existing track name from key :track referring to keys :artist and :album from the database
+
+    On success: HTTP Response 200 ':track has been deleted!'
+    On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'confirm' doesn't exist
+                HTTP Response 500 'If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                JSON body key 'confirm' does not have the value 'True'
+                HTTP Response 500 'You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                :track doesn't exist in the database
+                HTTP Response 500 'I can't find :track from the album :album by :artist!'
+
+### Lyrics
+    DELETE /deletelyrics/:artist/:album/:track
+    JSON body: {'confirm': 'True'}
+
+    Deletes the existing lyrics from the track in key :track referring to keys :artist and :album from the database
+
+    On success: HTTP Response 200 ':track had its lyrics emptied!'
+    On failure: 
+                Too few characters in :artist or :album
+                HTTP Response 500 'Seems like most artists or albums should contain more than two characters!'
+
+                JSON body key 'confirm' doesn't exist
+                HTTP Response 500 'If you'd really like to delete an artist and its albums/tracks, please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                JSON body key 'confirm' does not have the value 'True'
+                HTTP Response 500 'You'll need to take the safety off - please include 'confirm': 'True' in the JSON body.\n\nWarning, this will delete all associated albums/tracks.'
+
+                :track doesn't exist in the database
+                HTTP Response 500 'I can't find :track from the album :album by :artist!'

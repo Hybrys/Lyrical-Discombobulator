@@ -25,6 +25,11 @@ def index():
 
 @auth.verify_password
 def verify_password(username, password):
+    """
+    Simple 'HTTP Basic Authentication' check, required by all routes
+    
+    Checks against a complex password, which was hashed and put into 'SECRET_KEY'
+    """
     if check_password_hash(SECRET_KEY, password):
         return True
     return False
@@ -65,9 +70,9 @@ def add_album(artist, album):
     if resp == SUCCESS_NO_RESPONSE:
         return Response(f"Added {album} for {artist} to the database!")
     elif resp == NAME_COLLIDED:
-        return Response(f"The album {album} by {artist} already exists!  Please pick something unique to rename it to.", status=500)
+        return Response(f"The album {album} by {artist} already exists!", status=500)
     elif resp == NOT_FOUND:
-        return Response(f"The artist {artist} wasn't found in the database!  It needs to exist before we can add albums to it!", status=500)
+        return Response(f"The artist {artist} wasn't found in the database!", status=500)
 
 @bp.route('/addtrack/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
@@ -84,14 +89,14 @@ def add_track(artist, album, track):
 
     dupe_check = database.view_track_lyrics(track, artist, album)
     if dupe_check[0] != NOT_FOUND:
-        return Response(f"That track '{track}' on {album} by {artist} already exists!", status=500)
+        return Response(f"The track '{track}' on {album} by {artist} already exists!", status=500)
 
     resp = database.add_album_tracks(artist, album, [track])
 
     if resp == SUCCESS_NO_RESPONSE:
         return Response(f"Added {track} from {album} by {artist} to the database!")
     elif resp == NOT_FOUND:
-        return Response(f"The album {album} wasn't found in the database!  It needs to exist before we can add tracks to it!", status=500)
+        return Response(f"The album {album} wasn't found in the database!", status=500)
 
 @bp.route('/addlyrics/<string:artist>/<string:album>/<string:track>', methods=['POST'])
 @auth.login_required
@@ -107,14 +112,14 @@ def add_lyrics(artist, album, track):
         return Response(f"Seems like most artists or albums should contain at least two characters!", status=500)
 
     if 'lyrics' not in request.json:
-        return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against lyrics in the json data", status=500)
+        return Response(f"Seems like you should add some lyrics if you'd like to modify a track!  I'm checking against 'lyrics' in the JSON data", status=500)
 
     resp = database.add_track_lyrics(artist, album, track, request.json['lyrics'])
 
     if resp == SUCCESS_NO_RESPONSE:
         return Response(f"Added lyrics to the track {track}!")
     elif resp == NOT_FOUND:
-        return Response(f"The track {track} wasn't found in the database!  It needs to exist before we can add lyrics to it!", status=500)
+        return Response(f"The track {track} wasn't found in the database!", status=500)
     elif resp == NO_ITEM_TO_ADD:
         return Response(f"We found 'lyrics' in the JSON, but you need to specify some actual lyrics!", status=500)
 
