@@ -7,11 +7,14 @@ Debug currently True
 
 from flask import Flask, Response
 from urllib.parse import unquote, quote
-from db.db_postgres import DbFunctions, NOT_FOUND, NAME_COLLIDED, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
+from db.db_postgres import DbFunctions, NOT_FOUND, SUCCESS_NO_RESPONSE, MANY_FOUND, NO_CONTENT
 from discombob import discombob
+import api.adminroutes as adminroutes
+
+database = DbFunctions()
 
 app = Flask(__name__)
-database = DbFunctions()
+app.register_blueprint(adminroutes.bp)
 
 @app.get("/")
 def index():
@@ -84,6 +87,7 @@ def view_album(album):
             response.append(f"<td>{album_title}</td>")
             response.append(track_link)
         response = "".join(response) + "</table>"
+        
         return Response(response)
 
     elif check == NOT_FOUND:
@@ -98,6 +102,7 @@ def view_album(album):
             album_uri = quote(res_album[2])
             response.append(f"<br /><a href=# onclick='$(\"#div1\").load(\"album/{album_uri}\")'>{res_album[2]}</a>")
         response = "".join(response)
+        
         return Response(response)
 
     else:
@@ -146,6 +151,7 @@ def view_track(track, artist, album):
         for track_title, artist_name, album_title in result:
             response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
         response = "".join(response) + "</table>"
+        
         return Response(response)
 
     else:
@@ -172,6 +178,7 @@ def lyric_lookup(searchparam):
     for artist_name, album_title, track_title in check:
         response.extend(convert_link_strings(artist_name, album_title, track_title)[:3])
     response = "".join(response) + "</table>"
+    
     return Response(response)
 
 @app.get("/discombobulate/<string:track>/<string:artist>/<string:album>")
@@ -215,6 +222,7 @@ def lyric_discombob(track, artist, album):
             return Response(response, status=200)    # Intended to be non-200, but this causes browser render issues
         return Response(response)
     else:
+        
         return Response("This track isn't in the database yet!  Sorry!", status=200)    # Intended to be non-200, but this causes browser render issues
 
 

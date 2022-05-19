@@ -16,7 +16,7 @@
 \connect database
 
 -- Dumping structure for table database.artists
-CREATE TABLE IF NOT EXISTS artists (artist_id INTEGER PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name));
+CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name));
 
 -- Dumping data for table database.artists: -1 rows
 /*!40000 ALTER TABLE "artists" DISABLE KEYS */;
