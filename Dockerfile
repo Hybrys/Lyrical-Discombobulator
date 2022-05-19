@@ -7,6 +7,10 @@ WORKDIR /app
 # Set an ENV to let the app check where it is, to pick DB URI
 ENV CONTAINER_DB=True
 
+# Recommended ENV variables for dockerized apps
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
 COPY requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 RUN pip3 install syllapy --no-deps
@@ -21,4 +25,4 @@ COPY ./api/*.py ./api/
 COPY ./tests/*.py ./tests/
 COPY ./tests/mock/*.pickle ./tests/mock/
 
-CMD ["python3", "./main.py"]
+ENTRYPOINT ["gunicorn", "-w", "2", "-b", "0.0.0.0:4000", "main:app"]
