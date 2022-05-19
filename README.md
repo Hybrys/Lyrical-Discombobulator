@@ -236,7 +236,7 @@ This is an administrator-only API intended to allow for the easy and quick modif
 
 
 
-## Delete
+## Deleting items from the database
 #### Artists
     DELETE /deleteartist/:artist
     JSON body: {"confirm": "True"}
@@ -318,3 +318,63 @@ This is an administrator-only API intended to allow for the easy and quick modif
 
                 :track doesn't exist in the database
                 HTTP Response 500 'I can't find :track from the album :album by :artist!'
+
+## Running the scraper
+### These all take a LONG time to run and should be used with caution
+#### Artists
+    GET /scrapeartists
+    JSON body: {"full_run": "True"} or
+
+    GET /scrapeartists
+    JSON body: {"artists": "example artist"} or
+
+    GET /scrapeartists
+    JSON body: {"artists": ["example artist 1", "example artist 2]}
+
+    Initiates the artist-album scraper - this may take a long time to resolve (up to 2 minutes)
+
+    On success: 
+                HTTP Response 200 'Manual full artist scraper run complete!' or
+                HTTP Response 200 'Manual artists scraper run complete with the following artists: :(JSON body key 'artists' value)'
+    On failure: 
+                JSON body does not contain one the keys 'full_run' or 'artists' or
+                JSON body key 'full_run' does not contain the value 'True'
+                HTTP Response 500 'Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.'
+
+#### Albums
+    GET /scrapealbums
+    JSON body: {"full_run": "True"} or
+
+    GET /scrapealbums
+    JSON body: {"albums": {"example artist": "example album"}}
+
+    Initiates the album-track scraper - this may take a long time to resolve (up to 10 minutes)
+
+    On success: 
+                HTTP Response 200 'Manual full album scraper run complete!' or
+                HTTP Response 200 'Manual album scraper run complete with the following artists: :(JSON body key "albums" dictionary key)'s album :(JSON body key "albums" dictionary value)'
+    On failure: 
+                JSON body does not contain one the keys 'full_run' or 'albums' or
+                JSON body key 'full_run' does not contain the value 'True'
+                HTTP Response 500 'Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.'
+
+#### tracks
+    GET /scrapetracks
+    JSON body: {"full_run": "True"} or
+
+    GET /scrapetracks
+    JSON body: {"second_pass": "True"} or
+
+    GET /scrapetracks
+    JSON body: {"tracks": [["example artist", "example album", "example track"]]}
+
+    Initiates the track-lyric scraper - this may take a long time to resolve (up to 30 minutes)
+
+    On success: 
+                HTTP Response 200 'Manual full track/lyric run complete!' or
+                HTTP Response 200 'Manual second pass lyric scraper run complete!' or
+                HTTP Response 200 'Manual album scraper run complete with the following artists: :(JSON body key "tracks" list of lists element three) from :(JSON body key "tracks" list of lists element one)'s album :(JSON body key "tracks" list of lists element two)'
+    On failure: 
+                JSON body does not contain one the keys 'full_run', 'second_pass', or 'albums' or
+                JSON body key 'full_run' or 'second_pass' does not contain the value 'True'
+                HTTP Response 500 'Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.'

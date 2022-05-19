@@ -7,12 +7,15 @@ from flask import Blueprint, Response, request
 from db.db_postgres import DbFunctions, NAME_COLLIDED, NOT_FOUND, NO_ITEM_TO_ADD, SUCCESS_NO_RESPONSE
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import check_password_hash
+from scraper import scraper
+import logging
 
 SECRET_KEY = "pbkdf2:sha256:260000$PAGsZbqZr7kmjlik$d14d560e9395142b4068facac3266805532b92c5441306fbbd20b1d0ffd7ecd2"
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 database = DbFunctions()
 auth = HTTPBasicAuth()
+logger = logging.getLogger('api_logger')
 
 @bp.route('', methods=['GET'])
 def index():
@@ -21,7 +24,7 @@ def index():
 
     :return: Flask Response object with status code 418
     """
-    return Response("This route serves a potential index page - a starting point.  It's not intended to be accessed, as I am merely a teapot.<br/><br/>Please read the documentation in README.md", status=418)
+    return Response("This route serves a potential index page - a starting point.  It's not intended to be accessed, as I am merely a teapot.<br><br>Please read the documentation in README.md", status=418)
 
 @auth.verify_password
 def verify_password(username, password):
@@ -347,4 +350,90 @@ def delete_lyrics(artist, album, track):
     else:
         return Response(f"I can't find {track} from the album {album} by {artist}!", status=500)
 
-# TODO Scraper Implementation
+@bp.route('/scrapeartists', methods=['GET'])
+@auth.login_required
+def scrape_artists():
+    """
+    This route requires a JSON with the key-pair related to the intended action:
+        'full_run': 'True' for a full run of unparsed artists
+        'artists': ['list of artists'] for specific artists
+
+    :return: Flask Response object on scraper completion, or
+             Flask Response object with a status code 500 on no valid JSON tags present
+    """
+    artists_to_scrape = []
+
+    if 'full_run' in request.json:
+        if request.json['full_run'] == 'True':
+            logger.error("Manual full artist run initiated")
+            scraper.get_albums()
+            return Response("Manual full artist scraper run complete!")
+    if 'artists' in request.json:
+        for i, artist in enumerate(request.json['artists']):
+            if len(artist) == 1 and i == 0:
+                artists_to_scrape = [request.json['artists']]
+                break
+            else:
+                artists_to_scrape.append(artist)
+        scraper.get_albums(artists_to_scrape)
+        return Response(f"Manual artists scraper run complete with the following artists:<br>{'<br>'.join(artists_to_scrape)}")
+        
+    return Response("Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.", status=500)
+
+@bp.route('/scrapealbums', methods=['GET'])
+@auth.login_required
+def scrape_albums():
+    """
+    This route requires a JSON with the key-pair related to the intended action:
+        'full_run': 'True' for a full run of unparsed albums
+        'album': {'example_artist': 'example_album'} for specific artist/album combinations
+
+    :return: Flask Response object on scraper completion, or
+             Flask Response object with a status code 500 on no valid JSON tags present
+    """
+    albums_to_scrape = []
+
+    if 'full_run' in request.json:
+        if request.json['full_run'] == 'True':
+            logger.error("Manual full album run initiated")
+            scraper.get_tracks()
+            return Response("Manual full album scraper run complete!")
+    if 'albums' in request.json:
+        for album_set in request.json['albums'].items():
+            albums_to_scrape.append(f"{album_set[0]}'s album {album_set[1]}")
+            scraper.get_tracks(album_set[0], album_set[1])
+        return Response(f"Manual album scraper run complete with the following artist/album combinations:<br>{'<br>'.join(albums_to_scrape)}")
+        
+    return Response("Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.", status=500)
+
+@bp.route('/scrapetracks', methods=['GET'])
+@auth.login_required
+def scrape_tracks():
+    """
+    This route requires a JSON with the key-pair related to the intended action:
+        'full_run': 'True' for a full run of unparsed tracks
+        'second_run': 'True' for a full run of parsed tracks that still have 'NULL' as their lyrics
+        'album': [['artist', 'album', 'track']] for specific artist/album combinations
+
+    :return: Flask Response object on scraper completion, or
+             Flask Response object with a status code 500 on no valid JSON tags present
+    """
+    tracks_to_scrape = []
+
+    if 'full_run' in request.json:
+        if request.json['full_run'] == 'True':
+            logger.error("Manual full track/lyric run initiated")
+            scraper.get_lyrics()
+            return Response("Manual full track/lyric run complete!")
+    if 'second_pass' in request.json:
+        if request.json['second_pass'] == 'True':
+            logger.error("Second pass manual run initiated")
+            scraper.second_pass_lyrics()
+            return Response("Manual second pass lyric scraper run complete!")
+    if 'tracks' in request.json:
+        print(request.json['tracks'])
+        for request_set in request.json['tracks']:
+            tracks_to_scrape.append(f"{request_set[2]} from {request_set[0]}'s album {request_set[1]}")
+            scraper.get_lyrics(request_set[0], request_set[1], request_set[2])
+        return Response(f"Manual lyric scraper run complete with the following tracks:<br>{'<br>'.join(tracks_to_scrape)}")
+    return Response("Please use the JSON body to define what you'd like to scrape.  Check the docs for more info.", status=500)
