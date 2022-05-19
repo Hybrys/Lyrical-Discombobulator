@@ -15,7 +15,9 @@ The database is pre-populated with over 1000 artists and 45000 tracks with lyric
 
 ## Dependancies
 Requires Docker v18 or higher (docker compose up -d)
- - Creates Postgres and pgAdmin containers for app usage
+ - Creates Postgres container
+ - pgAdmin container
+ - Flask web app container
 
 ## Usage
 #### To run the server:
