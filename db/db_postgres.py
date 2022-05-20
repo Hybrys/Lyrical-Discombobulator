@@ -21,14 +21,23 @@ class DbFunctions():
         :param filename: Optional param for using a test database
         """
         # Check env variables for db
-        dbloc = environ.get('DATABASE')
+        db_name = environ.get('DATABASE')
+        db_user = environ.get('DB_USER')
+        db_pass = environ.get('DB_PASS')
+        db_location = environ.get('DB_LOC')
 
         # Find out if I'm containerized
         container_check = environ.get('CONTAINER_DB')
-        if container_check:
-            self.database = create_engine(f"postgresql+pg8000://postgres:@pg:5454/{dbloc}")
-        else:
-            self.database = create_engine(f"postgresql+pg8000://postgres:@localhost:5454/{dbloc}")
+        if container_check == "":
+            db_location = "localhost:5454"
+        engine_uri = f"postgresql+pg8000://{db_user}:{db_pass}@{db_location}/{db_name}"
+        
+        unix_socket = environ.get('DB_UNIX')
+        if unix_socket != "":
+            engine_uri = f"postgresql+pg8000://{db_user}:{db_pass}@/{db_name}?unix_sock={db_location}"
+
+        self.database = create_engine(engine_uri)
+
         with Session(self.database) as db:
             db.execute("CREATE TABLE IF NOT EXISTS artists (artist_id SERIAL PRIMARY KEY, name TEXT, isparsed BOOLEAN, UNIQUE(name))")
             db.execute("CREATE TABLE IF NOT EXISTS albums (album_id SERIAL PRIMARY KEY, album_title TEXT, artist_id INTEGER, isparsed BOOLEAN, FOREIGN KEY(artist_id) REFERENCES artists(artist_id), UNIQUE(album_title, artist_id))")
