@@ -1,4 +1,4 @@
-# Nathan C Spring 2022 Python Portfolio Project
+# Lyrical Discombobulator
 
 ## Purpose
 This project was created as a portfolio item, and was used as expanding education while attending NuCamp.  The intent was to create a simple artist/album/track/lyric search engine while experimenting with a variety of Python modules, test-driven development, pickles, and containerization.
