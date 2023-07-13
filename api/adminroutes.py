@@ -10,7 +10,7 @@ from werkzeug.security import check_password_hash
 from scraper import scraper
 import logging
 
-SECRET_KEY = "pbkdf2:sha256:260000$PAGsZbqZr7kmjlik$d14d560e9395142b4068facac3266805532b92c5441306fbbd20b1d0ffd7ecd2"
+SECRET_KEY = 
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 database = DbFunctions()
